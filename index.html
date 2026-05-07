@@ -1,0 +1,204 @@
+<!DOCTYPE html>
+<html lang="en"><head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <title>One thing.</title>
+  
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com">
+  
+  
+<link rel="stylesheet" href="styles.css">
+</head>
+<body>
+  <div class="backdrop" id="backdrop"></div>
+
+  <!-- Onboarding -->
+  <div class="onboard" id="onboard" hidden="">
+    <div class="onboard-stage">
+      <div class="onboard-step" id="ob-1" data-step="1">
+        <div class="ob-sub">Welcome</div>
+        <h2>What's the<br>one thing?</h2>
+        <button class="ob-cta" data-next="2">
+          <span>Continue</span>
+          <svg width="14" height="14" viewBox="0 0 14 14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M2 7h10M8 3l4 4-4 4"></path></svg>
+        </button>
+      </div>
+      <div class="onboard-step" id="ob-2" data-step="2">
+        <div class="ob-sub">Type it. Just one.</div>
+        <input class="ob-input" id="ob-input" placeholder="The thing you're avoiding…" autocomplete="off">
+        <button class="ob-cta" id="ob-start" disabled="">
+          <span>Start</span>
+          <svg width="14" height="14" viewBox="0 0 14 14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M2 7h10M8 3l4 4-4 4"></path></svg>
+        </button>
+      </div>
+      <div class="onboard-step" id="ob-3" data-step="3">
+        <div class="ob-sub">Until it's done.</div>
+        <h2 id="ob-3-text">Until it's done.</h2>
+      </div>
+      <div class="onboard-progress" id="ob-progress">
+        <span class="active"></span><span></span><span></span>
+      </div>
+      <button class="ob-skip" id="ob-skip">skip</button>
+    </div>
+  </div>
+
+  <!-- Status -->
+  <div class="status" id="status">
+    <span class="pill"><span class="live"></span><span id="tod-label">Morning</span></span>
+    <span class="dot"></span>
+    <span id="streak-label">0 done today</span>
+  </div>
+
+  <!-- Greeting (shown briefly when there's a yesterday log) -->
+  <div class="greeting" id="greeting"></div>
+
+  <!-- Main card -->
+  <div class="stage">
+    <div class="card-wrap" id="cardwrap">
+      <div class="label">ONE THING. UNTIL IT'S DONE.</div>
+      <div class="card" id="card">
+        <div class="card-inner">
+          <div class="thing empty" id="thing" contenteditable="true" spellcheck="true" data-placeholder="What's the one thing on your plate?"></div>
+          <div class="card-actions">
+            <div class="meta">
+              <span class="timer-dot"></span>
+              <span id="timer">00:00</span>
+            </div>
+            <span class="edit-bar">
+              <span><kbd>⏎</kbd> save · <kbd>esc</kbd> cancel</span>
+            </span>
+            <button class="btn btn-primary" id="done-btn" disabled="">
+              <span class="btn-done-label">Mark done</span>
+              <span class="btn-save-label">Save</span>
+              <svg width="13" height="13" viewBox="0 0 14 14" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><polyline points="2 7 6 11 12 3"></polyline></svg>
+            </button>
+          </div>
+        </div>
+      </div>
+      <div class="hint" id="hint"></div>
+    </div>
+  </div>
+
+  <!-- Gear + streak ring -->
+  <div class="gear-wrap">
+    <svg class="gear-ring" viewBox="0 0 52 52" id="gear-ring">
+      <circle class="bg" cx="26" cy="26" r="24"></circle>
+      <circle class="fg" cx="26" cy="26" r="24" stroke-dasharray="150.79" stroke-dashoffset="150.79"></circle>
+    </svg>
+    <button class="gear" id="gear" aria-label="Settings">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round">
+        <circle cx="12" cy="12" r="3"></circle>
+        <path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"></path>
+      </svg>
+    </button>
+  </div>
+
+  <div class="popover" id="popover" role="menu">
+    <div class="pop-title">Streak</div>
+    <div class="pop-row" style="cursor:default;">
+      <span><span id="streak-count">0</span>-day streak</span>
+      <span class="right" id="streak-days"></span>
+    </div>
+    <div class="pop-divider"></div>
+    <div class="pop-title">Mood</div>
+    <div class="pop-row" id="theme-row">
+      <span>Time of day</span>
+      <div class="swatches" id="swatches">
+        <span class="swatch active" data-mood="auto" style="background:linear-gradient(135deg,#ffd7c2,#d0b2ff);" title="Auto"></span>
+        <span class="swatch" data-mood="dawn" style="background:linear-gradient(135deg,#ffd7c2,#ffeed8);" title="Dawn"></span>
+        <span class="swatch" data-mood="day" style="background:linear-gradient(135deg,#c6ece9,#d0b2ff);" title="Day"></span>
+        <span class="swatch" data-mood="dusk" style="background:linear-gradient(135deg,#ffd7f0,#fbc768);" title="Dusk"></span>
+        <span class="swatch" data-mood="night" style="background:linear-gradient(135deg,#10054d,#2e2460);" title="Night"></span>
+      </div>
+    </div>
+    <div class="pop-divider"></div>
+    <div class="pop-title">Sound</div>
+    <div class="pop-row" id="sound-row">
+      <span>Chime on done</span>
+      <span class="right" id="sound-state">On</span>
+    </div>
+    <div class="pop-divider"></div>
+    <div class="pop-row" id="log-row">
+      <span>Today's log</span>
+      <span class="right" id="log-count">—</span>
+    </div>
+    <div class="pop-row" id="manifesto-row">
+      <span>Why this app exists</span>
+      <span class="right">→</span>
+    </div>
+    <div class="pop-divider"></div>
+    <div class="pop-row" id="clear-row">
+      <span style="color:var(--color-muted-ash);">Clear everything</span>
+      <span class="right">⌫</span>
+    </div>
+  </div>
+
+  <!-- Counter -->
+  <div class="counter-zone" id="counterzone">
+    <button class="counter" id="counter" aria-label="Open queue">
+      <span class="plus" aria-hidden="true">
+        <svg width="10" height="10" viewBox="0 0 10 10" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"><path d="M5 1v8M1 5h8"></path></svg>
+      </span>
+      <span class="num" id="count-num">0</span>
+      <span id="count-label">in the wings</span>
+    </button>
+  </div>
+
+  <!-- Drawer -->
+  <div class="scrim" id="scrim"></div>
+  <div class="drawer" id="drawer" role="dialog" aria-label="Queue and log">
+    <div class="drawer-head">
+      <h2 id="drawer-title">In the wings</h2>
+      <span class="sub" id="drawer-sub">Drag to reorder. Click to make it the one.</span>
+    </div>
+    <div class="drawer-tabs">
+      <button class="drawer-tab active" data-tab="queue">In the wings</button>
+      <button class="drawer-tab" data-tab="log">Today's log</button>
+    </div>
+    <div id="queue-pane">
+      <div class="drawer-add">
+        <input id="add-input" placeholder="Add the next thing…">
+        <button id="add-btn">Add</button>
+      </div>
+      <div class="drawer-list" id="drawer-list" data-empty="Nothing waiting. Add something to do next."></div>
+    </div>
+    <div class="drawer-list" id="log-list" data-empty="Nothing done yet today. The first one's the hardest." style="display:none;"></div>
+  </div>
+
+  <!-- Completion overlay (calm, no card flash) -->
+  <div class="complete-overlay" id="complete-overlay">
+    <div class="motes" id="motes"></div>
+    <div class="complete-mark">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round">
+        <polyline points="4 12 10 18 20 6"></polyline>
+      </svg>
+    </div>
+  </div>
+
+  <!-- Manifesto -->
+  <div class="manifesto" id="manifesto">
+    <button class="manifesto-close" id="manifesto-close" aria-label="Close">
+      <svg width="14" height="14" viewBox="0 0 14 14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M3 3l8 8M11 3l-8 8"></path></svg>
+    </button>
+    <div class="manifesto-inner">
+      <h1>Why this exists.</h1>
+      <p>Every other app wants you to do <em>more</em>. More tabs. More projects. More tags. More notifications.</p>
+      <p>This one is built around a quiet observation: most days, there is one thing that actually matters. The rest is comfort and avoidance.</p>
+      <p>So we removed the rest. No accounts. No teams. No sync. No streaks to maintain anxiously. No tags, no priorities, no projects, no inbox.</p>
+      <p>Just the thing. Until it's done.</p>
+      <p>Then the next thing.</p>
+      <p>If this feels too small, that's the point. The tool isn't doing the work — you are. We're just trying to stay out of the way.</p>
+      <div class="signoff">— made with restraint</div>
+    </div>
+  </div>
+
+  <script src="assets/vendor/react.development.js"></script>
+  <script src="assets/vendor/react-dom.development.js"></script>
+  <script src="assets/vendor/babel-standalone.js"></script>
+  <script type="text/babel" src="assets/tweaks-panel.jsx"></script>
+  <script src="assets/app.js"></script>
+  <script type="text/babel" src="assets/tweaks-app.js"></script>
+
+
+</body></html>
