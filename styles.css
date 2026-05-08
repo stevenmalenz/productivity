@@ -449,10 +449,11 @@
 
     .label {
       color: var(--color-muted-ash);
-      font-size: 11px;
-      letter-spacing: 0.5px;
-      text-transform: uppercase;
-      font-weight: 500;
+      font-size: 13px;
+      letter-spacing: 0.1px;
+      font-weight: 400;
+      font-style: italic;
+      font-family: var(--font-serif);
       text-align: center;
     }
 
