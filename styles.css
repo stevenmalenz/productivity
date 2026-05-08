@@ -634,24 +634,21 @@
       display: flex; flex-direction: column-reverse; align-items: flex-end; gap: 10px;
     }
     .counter {
-      display: inline-flex; align-items: center; gap: 10px;
-      padding: 11px 16px;
-      background: rgba(255,255,255,0.78);
-      backdrop-filter: blur(14px);
-      -webkit-backdrop-filter: blur(14px);
-      border-radius: 999px;
-      box-shadow: var(--shadow-subtle-3);
-      color: var(--color-midnight-ink);
+      display: inline-flex; align-items: center; gap: 8px;
+      padding: 10px 8px;
+      background: transparent;
+      color: var(--color-muted-ash);
       font-size: 13px; cursor: pointer; border: 0;
-      transition: transform 0.2s ease;
+      opacity: 0.55;
+      transition: opacity 0.2s ease, color 0.2s ease;
       letter-spacing: 0.25px;
     }
-    .counter:hover { transform: translateY(-1px); }
-    .counter .num { font-weight: 600; font-variant-numeric: tabular-nums; }
+    .counter:hover { color: var(--color-midnight-ink); opacity: 1; }
+    .counter .num { font-weight: 500; font-variant-numeric: tabular-nums; }
     .counter .plus {
-      width: 20px; height: 20px; border-radius: 50%;
+      width: 14px; height: 14px;
       display: grid; place-items: center;
-      color: var(--color-muted-ash); background: rgba(17,17,17,0.05);
+      color: inherit;
     }
     .ministack {
       display: flex; flex-direction: column-reverse; gap: 6px;
