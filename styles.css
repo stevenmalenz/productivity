@@ -848,34 +848,44 @@
       100% { opacity: 0; transform: translate(var(--dx), var(--dy)) scale(1.2); }
     }
 
-    /* ──────── Manifesto page ──────── */
+    /* ──────── Manifesto modal ──────── */
     .manifesto {
       position: fixed; inset: 0; z-index: 50;
-      background: var(--color-canvas-white);
+      display: grid; place-items: center;
+      padding: 24px;
+      background: rgba(17,17,17,0.4);
+      backdrop-filter: blur(4px);
+      -webkit-backdrop-filter: blur(4px);
       opacity: 0; pointer-events: none;
-      transition: opacity 0.5s ease;
-      overflow-y: auto;
+      transition: opacity 0.3s ease;
     }
     .manifesto.open { opacity: 1; pointer-events: auto; }
     .manifesto-inner {
-      max-width: 620px;
-      margin: 0 auto;
-      padding: 100px 40px 120px;
+      position: relative;
+      width: 100%;
+      max-width: 560px;
+      max-height: 80vh;
+      overflow-y: auto;
+      background: var(--color-canvas-white);
+      border-radius: 18px;
+      box-shadow: var(--shadow-xl);
+      padding: 56px 44px 44px;
       font-family: var(--font-serif);
       font-weight: 300;
     }
     .manifesto h1 {
-      font-size: 56px;
-      letter-spacing: -2px;
-      line-height: 1;
-      margin: 0 0 48px;
-      font-weight: 300;
+      font-size: 40px;
+      letter-spacing: -1.4px;
+      line-height: 1.05;
+      margin: 0 0 28px;
+      font-weight: 500;
+      color: var(--color-midnight-ink);
     }
     .manifesto p {
-      font-size: 22px;
+      font-size: 19px;
       line-height: 1.5;
-      letter-spacing: -0.3px;
-      margin: 0 0 28px;
+      letter-spacing: -0.2px;
+      margin: 0 0 22px;
       color: #2a2a2a;
       text-wrap: pretty;
     }
@@ -890,17 +900,14 @@
       letter-spacing: 0.5px;
       text-transform: uppercase;
       color: var(--color-muted-ash);
-      margin-top: 64px;
+      margin-top: 36px;
     }
     .manifesto-close {
-      position: fixed; top: 28px; right: 28px;
-      border: 0; background: rgba(255,255,255,0.7);
-      backdrop-filter: blur(12px);
-      -webkit-backdrop-filter: blur(12px);
-      width: 36px; height: 36px; border-radius: 50%;
+      position: absolute; top: 14px; right: 14px;
+      border: 0; background: transparent;
+      width: 32px; height: 32px;
       display: grid; place-items: center;
       cursor: pointer; color: var(--color-muted-ash);
-      box-shadow: var(--shadow-subtle-3);
       transition: color 0.15s ease, transform 0.15s ease;
     }
     .manifesto-close:hover { color: var(--color-midnight-ink); transform: rotate(90deg); }
@@ -1012,7 +1019,8 @@
       .status { top: 16px; }
       .gear-wrap { left: 16px; bottom: 16px; }
       .counter-zone { right: 16px; bottom: 16px; }
-      .manifesto-inner { padding: 72px 24px 80px; }
-      .manifesto h1 { font-size: 40px; }
-      .manifesto p { font-size: 19px; }
+      .manifesto { padding: 16px; }
+      .manifesto-inner { padding: 44px 24px 32px; max-height: 86vh; }
+      .manifesto h1 { font-size: 30px; margin-bottom: 22px; }
+      .manifesto p { font-size: 17px; }
     }

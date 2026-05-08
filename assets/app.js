@@ -117,18 +117,17 @@
              g2:'radial-gradient(circle at 70% 70%, #d0b2ff 0%, #c6ece9 50%, #ffffff 82%)', label:'Daylight' },
     dusk:  { g1:'radial-gradient(circle at 30% 30%, #ffd7f0 0%, #fbc768 45%, #ffffff 82%)',
              g2:'radial-gradient(circle at 70% 70%, #e16540 0%, #ffd7f0 45%, #ffffff 80%)', label:'Dusk' },
-    night: { g1:'radial-gradient(circle at 30% 30%, #2e2460 0%, #10054d 45%, #050214 90%)',
-             g2:'radial-gradient(circle at 70% 70%, #10054d 0%, #2e2460 50%, #050214 90%)', label:'Night' }
+    night: { g1:'radial-gradient(circle at 30% 30%, #b4a4e8 0%, #d3c7f0 45%, #ffffff 90%)',
+             g2:'radial-gradient(circle at 70% 70%, #d0b2ff 0%, #e2ddfd 55%, #ffffff 88%)', label:'Night' }
   };
   function applyMood() {
     const m = moods[computeMood()];
     document.documentElement.style.setProperty('--g1', m.g1);
     document.documentElement.style.setProperty('--g2', m.g2);
     todLabel.textContent = m.label;
-    const isNight = computeMood() === 'night';
-    document.body.style.color = isNight ? '#f4f3ef' : '#111';
-    cardEl.style.background = isNight ? 'rgba(39,38,37,0.72)' : 'rgba(255,255,255,0.78)';
-    thingEl.style.color = isNight ? '#ffffff' : '#111111';
+    document.body.style.color = '#111';
+    cardEl.style.background = 'rgba(255,255,255,0.78)';
+    thingEl.style.color = '#111111';
     swatchesEl.querySelectorAll('.swatch').forEach(s => {
       s.classList.toggle('active', s.dataset.mood === (state.moodOverride || 'auto'));
     });
@@ -147,7 +146,7 @@
       thingEl.textContent = '';
       doneBtn.disabled = true;
       cardWrap.classList.add('empty-state');
-      setHint('Click to write the one thing');
+      setHint('');
     } else {
       thingEl.classList.remove('empty');
       if (!editing) thingEl.textContent = v;
@@ -599,6 +598,7 @@
   function openManifesto() { manifestoEl.classList.add('open'); }
   function closeManifesto() { manifestoEl.classList.remove('open'); }
   manifestoClose.addEventListener('click', closeManifesto);
+  manifestoEl.addEventListener('click', (e) => { if (e.target === manifestoEl) closeManifesto(); });
 
   /** ---------- Greeting ---------- */
   function maybeShowGreeting() {
