@@ -17,6 +17,7 @@
     log: {},          // { 'YYYY-MM-DD': [{text, ts, note?}] }
     lastSeen: null,   // YYYY-MM-DD of last app open
     currentNote: '',  // free-form journal for the current task
+    released: {},     // { 'YYYY-MM-DD': [{text, ts}] } — things you took off the plate
   };
 
   let state = load();
@@ -93,6 +94,7 @@
   const drawer = el('drawer');
   const drawerList = el('drawer-list');
   const logList = el('log-list');
+  const releasedList = el('released-list');
   const drawerTitle = el('drawer-title');
   const drawerSub = el('drawer-sub');
   const queuePane = el('queue-pane');
@@ -105,6 +107,10 @@
   const asideScrim = el('aside-scrim');
   const asideText = el('aside-text');
   const asideClose = el('aside-close');
+  const exportRow = el('export-row');
+  const importRow = el('import-row');
+  const importFile = el('import-file');
+  const affirmEl = el('affirm');
 
   /** ---------- Mood ---------- */
   function computeMood() {
@@ -184,10 +190,13 @@
       state.current = v;
       state.timerStart = Date.now();
     } else if (!v) {
+      // Clearing the current task to empty is a deliberate "off the plate" act
+      const prev = state.current;
       state.current = '';
       state.timerStart = null;
       // No task means no aside note
       state.currentNote = '';
+      if (prev && prev.trim()) logReleased(prev);
     }
     editing = false;
     cardEl.classList.remove('editing');
@@ -377,15 +386,24 @@
     if (tab === 'queue') {
       queuePane.style.display = '';
       logList.style.display = 'none';
+      releasedList.style.display = 'none';
       drawerTitle.textContent = 'In the wings';
       drawerSub.textContent = 'Drag to reorder. Click to make it the one.';
       renderDrawer();
-    } else {
+    } else if (tab === 'log') {
       queuePane.style.display = 'none';
       logList.style.display = '';
+      releasedList.style.display = 'none';
       drawerTitle.textContent = "Today's log";
       drawerSub.textContent = 'Calm proof you showed up.';
       renderLog();
+    } else {
+      queuePane.style.display = 'none';
+      logList.style.display = 'none';
+      releasedList.style.display = '';
+      drawerTitle.textContent = 'Off the plate';
+      drawerSub.textContent = 'What you set down so the rest could breathe.';
+      renderReleased();
     }
   }
   document.querySelectorAll('.drawer-tab').forEach(t => {
@@ -415,7 +433,9 @@
       });
       row.querySelector('.x').addEventListener('click', (e) => {
         e.stopPropagation();
+        const removed = state.stack[stackIdx];
         state.stack.splice(stackIdx, 1);
+        if (removed) logReleased(removed);
         save(); renderDrawer(); renderCounter();
       });
       row.addEventListener('dragstart', (e) => {
@@ -483,6 +503,35 @@
     });
   }
 
+  function renderReleased() {
+    releasedList.innerHTML = '';
+    const today = todayISO();
+    const days7 = last7Days().reverse();
+    days7.forEach(({ iso }) => {
+      const items = state.released[iso] || [];
+      if (!items.length) return;
+      const dayWrap = document.createElement('div');
+      dayWrap.className = 'log-day';
+      const head = document.createElement('div');
+      head.className = 'log-day-head';
+      head.textContent = iso === today ? 'Today'
+        : iso === shiftISO(today, -1) ? 'Yesterday'
+        : new Date(iso + 'T00:00:00').toLocaleDateString(undefined, { weekday:'long', month:'short', day:'numeric' });
+      dayWrap.appendChild(head);
+      items.forEach(it => {
+        const r = document.createElement('div');
+        r.className = 'released-item';
+        const t = new Date(it.ts);
+        const hh = String(t.getHours()).padStart(2,'0');
+        const mm = String(t.getMinutes()).padStart(2,'0');
+        r.innerHTML = `<span class="ltext"></span><span class="ltime">${hh}:${mm}</span>`;
+        r.querySelector('.ltext').textContent = it.text;
+        dayWrap.appendChild(r);
+      });
+      releasedList.appendChild(dayWrap);
+    });
+  }
+
   function promote(stackIdx) {
     const item = state.stack[stackIdx];
     if (!item) return;
@@ -511,6 +560,30 @@
   addInput.addEventListener('keydown', (e) => {
     if (e.key === 'Enter') { addToStack(addInput.value); addInput.value=''; }
   });
+
+  /** ---------- Off the plate ---------- */
+  const affirmWords = ['released', 'cleansed', 'let go', 'space made', "not yours to carry"];
+  let affirmTimer = null;
+
+  function flashAffirm() {
+    const word = affirmWords[Math.floor(Math.random() * affirmWords.length)];
+    affirmEl.textContent = word;
+    if (affirmTimer) clearTimeout(affirmTimer);
+    affirmEl.classList.add('show');
+    affirmTimer = setTimeout(() => {
+      affirmEl.classList.remove('show');
+    }, 1100);
+  }
+
+  function logReleased(text) {
+    const t = (text || '').trim();
+    if (!t) return;
+    const today = todayISO();
+    if (!state.released[today]) state.released[today] = [];
+    state.released[today].push({ text: t, ts: Date.now() });
+    save();
+    flashAffirm();
+  }
 
   /** ---------- Done / Completion ---------- */
   function complete() {
@@ -630,6 +703,47 @@
   logRow.addEventListener('click', () => { closePopover(); openDrawer('log'); });
   manifestoRow.addEventListener('click', () => { closePopover(); openManifesto(); });
 
+  /** ---------- Backup / Restore ---------- */
+  function exportState() {
+    const data = JSON.stringify(state, null, 2);
+    const blob = new Blob([data], { type: 'application/json' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `onething-backup-${todayISO()}.json`;
+    document.body.appendChild(a);
+    a.click();
+    a.remove();
+    URL.revokeObjectURL(url);
+    closePopover();
+  }
+
+  function importFromFile(file) {
+    const reader = new FileReader();
+    reader.onload = () => {
+      try {
+        const parsed = JSON.parse(reader.result);
+        if (typeof parsed !== 'object' || parsed === null) throw new Error('shape');
+        if (!confirm('Restore from this backup? Your current task, queue, and log will be replaced.')) return;
+        state = { ...defaultState, ...parsed };
+        save();
+        renderAll();
+        closePopover();
+      } catch (e) {
+        alert("Couldn't read that file. It needs to be a backup from this app.");
+      }
+    };
+    reader.readAsText(file);
+  }
+
+  exportRow.addEventListener('click', exportState);
+  importRow.addEventListener('click', () => importFile.click());
+  importFile.addEventListener('change', (e) => {
+    const f = e.target.files && e.target.files[0];
+    if (f) importFromFile(f);
+    importFile.value = '';
+  });
+
   function openManifesto() { manifestoEl.classList.add('open'); }
   function closeManifesto() { manifestoEl.classList.remove('open'); }
   manifestoClose.addEventListener('click', closeManifesto);
@@ -639,9 +753,13 @@
   const asidePrompts = [
     "type through it. nobody's watching.",
     "what's coming up?",
-    "what are you scared to do?",
+    "what wants to be expressed?",
+    "is this from joy, or fear?",
+    "where's the magic in this one?",
+    "what would you write in your field book?",
+    "what's underneath?",
+    "are you having the time of your life right now?",
     "say the quiet part.",
-    "what would you write if no one read it?",
   ];
   let asideSaveTimer = null;
 
