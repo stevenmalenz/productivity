@@ -160,9 +160,8 @@
       if (!editing) thingEl.textContent = v;
       doneBtn.disabled = !v && !editing;
       cardWrap.classList.remove('empty-state');
-      setHint(editing
-        ? '<kbd>⏎</kbd> save · <kbd>esc</kbd> cancel'
-        : 'Click text to edit · <kbd>⌘⏎</kbd> mark done');
+      // While editing, the in-card edit-bar already shows the shortcuts.
+      setHint(editing ? '' : 'Click text to edit · <kbd>⌘⏎</kbd> mark done');
     }
   }
 
@@ -176,7 +175,7 @@
     thingEl.focus();
     placeCaretAtEnd(thingEl);
     doneBtn.disabled = false;
-    setHint('<kbd>⏎</kbd> save · <kbd>esc</kbd> cancel');
+    setHint('');
   }
 
   function commitEdit() {
@@ -273,8 +272,20 @@
   function tickTimer() {
     timerEl.textContent = (state.current && state.timerStart)
       ? fmt(Date.now() - state.timerStart) : '00:00';
+    updateDocTitle();
   }
   setInterval(tickTimer, 1000);
+
+  function updateDocTitle() {
+    const cur = (state.current || '').trim();
+    if (!cur) { document.title = 'One thing.'; return; }
+    const truncated = cur.length > 40 ? cur.slice(0, 37) + '…' : cur;
+    if (state.timerStart) {
+      document.title = `${fmt(Date.now() - state.timerStart)} · ${truncated}`;
+    } else {
+      document.title = truncated;
+    }
+  }
 
   /** ---------- Streak / log render ---------- */
   function renderStreak() {
@@ -799,6 +810,7 @@
     applyMood();
     tickTimer();
     renderAside();
+    updateDocTitle();
   }
 
   if (!state.onboarded) {
