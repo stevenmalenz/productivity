@@ -754,12 +754,10 @@
     "type through it. nobody's watching.",
     "what's coming up?",
     "what wants to be expressed?",
-    "is this from joy, or fear?",
-    "where's the magic in this one?",
-    "what would you write in your field book?",
     "what's underneath?",
-    "are you having the time of your life right now?",
+    "where's the resistance?",
     "say the quiet part.",
+    "what would you write if no one read it?",
   ];
   let asideSaveTimer = null;
 
