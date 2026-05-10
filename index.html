@@ -8,7 +8,7 @@
   <link rel="preconnect" href="https://fonts.gstatic.com">
   
   
-<link rel="stylesheet" href="styles.css?v=20260510e">
+<link rel="stylesheet" href="styles.css?v=20260510f">
 </head>
 <body>
   <div class="backdrop" id="backdrop"></div>
@@ -149,6 +149,16 @@
       <span class="right">→</span>
     </div>
     <div class="pop-divider"></div>
+    <div class="pop-row" id="export-row">
+      <span>Back up to file</span>
+      <span class="right">↓</span>
+    </div>
+    <div class="pop-row" id="import-row">
+      <span>Restore from file</span>
+      <span class="right">↑</span>
+    </div>
+    <input type="file" id="import-file" accept=".json,application/json" hidden>
+    <div class="pop-divider"></div>
     <div class="pop-row" id="clear-row">
       <span style="color:var(--color-muted-ash);">Clear everything</span>
       <span class="right">⌫</span>
@@ -176,6 +186,7 @@
     <div class="drawer-tabs">
       <button class="drawer-tab active" data-tab="queue">In the wings</button>
       <button class="drawer-tab" data-tab="log">Today's log</button>
+      <button class="drawer-tab" data-tab="released">Off the plate</button>
     </div>
     <div id="queue-pane">
       <div class="drawer-add">
@@ -185,7 +196,11 @@
       <div class="drawer-list" id="drawer-list" data-empty="Nothing waiting. Add something to do next."></div>
     </div>
     <div class="drawer-list" id="log-list" data-empty="Nothing done yet today. The first one's the hardest." style="display:none;"></div>
+    <div class="drawer-list" id="released-list" data-empty="Your space is clear. Tend to the plate when you're ready." style="display:none;"></div>
   </div>
+
+  <!-- Affirmation toast (off-the-plate moments) -->
+  <div class="affirm" id="affirm" aria-live="polite"></div>
 
   <!-- Completion overlay (calm, no card flash) -->
   <div class="complete-overlay" id="complete-overlay">
@@ -217,9 +232,9 @@
   <script src="assets/vendor/react.development.js"></script>
   <script src="assets/vendor/react-dom.development.js"></script>
   <script src="assets/vendor/babel-standalone.js"></script>
-  <script type="text/babel" src="assets/tweaks-panel.jsx?v=20260510e"></script>
-  <script src="assets/app.js?v=20260510e"></script>
-  <script type="text/babel" src="assets/tweaks-app.js?v=20260510e"></script>
+  <script type="text/babel" src="assets/tweaks-panel.jsx?v=20260510f"></script>
+  <script src="assets/app.js?v=20260510f"></script>
+  <script type="text/babel" src="assets/tweaks-app.js?v=20260510f"></script>
 
 
 </body></html>
