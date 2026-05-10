@@ -1040,7 +1040,7 @@
 
     /* ──────── A note to self (aside) ──────── */
     .aside-tab {
-      position: absolute; top: 50%; right: -26px;
+      position: absolute; top: 50%; right: -28px;
       transform: translate(0, -50%);
       width: 28px; min-height: 116px;
       display: inline-flex; flex-direction: column;
@@ -1061,7 +1061,6 @@
     .aside-tab[hidden] { display: none; }
     .aside-tab:hover {
       opacity: 1; color: var(--color-midnight-ink);
-      transform: translate(4px, -50%);
       background: rgba(255,251,245,0.92);
     }
     .aside-tab-icon { opacity: 0.85; }
