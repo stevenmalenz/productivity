@@ -69,7 +69,6 @@
   const thingEl = el('thing');
   const doneBtn = el('done-btn');
   const timerEl = el('timer');
-  const todLabel = el('tod-label');
   const streakLabel = el('streak-label');
   const streakCountEl = el('streak-count');
   const streakDays = el('streak-days');
@@ -136,7 +135,6 @@
     const m = moods[computeMood()];
     document.documentElement.style.setProperty('--g1', m.g1);
     document.documentElement.style.setProperty('--g2', m.g2);
-    todLabel.textContent = m.label;
     document.body.style.color = '#111';
     cardEl.style.background = 'rgba(255,255,255,0.78)';
     thingEl.style.color = '#111111';
