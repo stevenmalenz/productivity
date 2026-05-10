@@ -276,6 +276,15 @@
     }
     return `${String(m).padStart(2,'0')}:${String(r).padStart(2,'0')}`;
   }
+  function fmtTime(ts) {
+    const d = new Date(ts);
+    let h = d.getHours();
+    const m = d.getMinutes();
+    const ampm = h >= 12 ? 'pm' : 'am';
+    h = h % 12;
+    if (h === 0) h = 12;
+    return m === 0 ? `${h}${ampm}` : `${h}:${String(m).padStart(2,'0')}${ampm}`;
+  }
   function tickTimer() {
     timerEl.textContent = (state.current && state.timerStart)
       ? fmt(Date.now() - state.timerStart) : '00:00';
@@ -480,15 +489,12 @@
       items.forEach(it => {
         const r = document.createElement('div');
         r.className = 'log-item';
-        const t = new Date(it.ts);
-        const hh = String(t.getHours()).padStart(2,'0');
-        const mm = String(t.getMinutes()).padStart(2,'0');
         r.innerHTML = `
           <svg class="check" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
             <polyline points="4 12 10 18 20 6"/>
           </svg>
           <span class="ltext"></span>
-          <span class="ltime">${hh}:${mm}</span>
+          <span class="ltime">${fmtTime(it.ts)}</span>
         `;
         r.querySelector('.ltext').textContent = it.text;
         if (it.note) {
@@ -521,10 +527,7 @@
       items.forEach(it => {
         const r = document.createElement('div');
         r.className = 'released-item';
-        const t = new Date(it.ts);
-        const hh = String(t.getHours()).padStart(2,'0');
-        const mm = String(t.getMinutes()).padStart(2,'0');
-        r.innerHTML = `<span class="ltext"></span><span class="ltime">${hh}:${mm}</span>`;
+        r.innerHTML = `<span class="ltext"></span><span class="ltime">${fmtTime(it.ts)}</span>`;
         r.querySelector('.ltext').textContent = it.text;
         dayWrap.appendChild(r);
       });
