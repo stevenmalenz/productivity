@@ -1007,11 +1007,146 @@
     }
     .onboard-progress span.active { background: var(--color-midnight-ink); }
 
+    /* ──────── A note to self (aside) ──────── */
+    .aside-tab {
+      position: absolute; top: 50%; right: -22px;
+      transform: translate(0, -50%);
+      width: 28px; min-height: 116px;
+      display: inline-flex; flex-direction: column;
+      align-items: center; justify-content: center;
+      gap: 8px; padding: 14px 0;
+      border: 0;
+      background: rgba(255,255,255,0.78);
+      backdrop-filter: blur(24px);
+      -webkit-backdrop-filter: blur(24px);
+      border-top-right-radius: 12px;
+      border-bottom-right-radius: 12px;
+      box-shadow: rgba(17,17,17,0.06) 4px 6px 16px -4px;
+      color: var(--color-muted-ash);
+      cursor: pointer;
+      opacity: 0.7;
+      transition: opacity 0.25s ease, transform 0.3s cubic-bezier(.2,.8,.2,1), color 0.2s ease, background 0.2s ease;
+    }
+    .aside-tab[hidden] { display: none; }
+    .aside-tab:hover {
+      opacity: 1; color: var(--color-midnight-ink);
+      transform: translate(4px, -50%);
+      background: rgba(255,251,245,0.92);
+    }
+    .aside-tab-icon { opacity: 0.85; }
+    .aside-tab-label {
+      writing-mode: vertical-rl;
+      transform: rotate(180deg);
+      font-family: var(--font-serif);
+      font-style: italic; font-weight: 300;
+      font-size: 11px; letter-spacing: 0.4px;
+      white-space: nowrap;
+    }
+    .aside-tab-dot {
+      position: absolute; top: 8px; right: 6px;
+      width: 5px; height: 5px; border-radius: 50%;
+      background: var(--color-leadgen-red);
+      opacity: 0; transform: scale(0.6);
+      transition: opacity 0.4s ease, transform 0.4s cubic-bezier(.2,.8,.2,1);
+    }
+    .aside-tab.has-note .aside-tab-dot { opacity: 0.75; transform: scale(1); }
+
+    .aside-scrim {
+      position: fixed; inset: 0; z-index: 44;
+      background: rgba(17,17,17,0.08);
+      opacity: 0; pointer-events: none;
+      transition: opacity 0.25s ease;
+    }
+    .aside-scrim.open { opacity: 1; pointer-events: auto; }
+
+    .aside-panel {
+      position: fixed; top: 50%; right: 24px;
+      transform: translate(24px, -50%);
+      z-index: 45;
+      width: min(360px, 90vw); max-height: min(560px, 80vh);
+      display: flex; flex-direction: column; gap: 12px;
+      padding: 26px 24px 18px;
+      background: #fffbf5;
+      border-radius: 16px;
+      box-shadow: var(--shadow-xl);
+      opacity: 0; pointer-events: none;
+      transition: opacity 0.28s ease, transform 0.32s cubic-bezier(.2,.8,.2,1);
+    }
+    .aside-panel.open {
+      opacity: 1; pointer-events: auto;
+      transform: translate(0, -50%);
+    }
+    .aside-head { display: flex; flex-direction: column; gap: 4px; padding-right: 24px; position: relative; }
+    .aside-title {
+      font-family: var(--font-serif);
+      font-weight: 400; font-style: italic;
+      font-size: 18px; letter-spacing: -0.3px;
+      color: var(--color-midnight-ink);
+    }
+    .aside-sub {
+      font-size: 11px; letter-spacing: 0.3px;
+      color: var(--color-muted-ash);
+      text-transform: uppercase; font-weight: 500;
+      overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+    }
+    .aside-sub em {
+      font-style: normal; color: var(--color-midnight-ink);
+      text-transform: none; letter-spacing: 0.1px;
+      font-weight: 400; opacity: 0.75;
+    }
+    .aside-sub.empty { display: none; }
+    .aside-close {
+      position: absolute; top: -6px; right: -10px;
+      border: 0; background: transparent;
+      width: 28px; height: 28px;
+      display: grid; place-items: center;
+      cursor: pointer; color: var(--color-muted-ash);
+      transition: color 0.15s ease, transform 0.15s ease;
+    }
+    .aside-close:hover { color: var(--color-midnight-ink); transform: rotate(90deg); }
+    .aside-text {
+      flex: 1; min-height: 180px;
+      border: 0; outline: none; resize: none;
+      background: transparent;
+      font-family: var(--font-serif);
+      font-weight: 300; font-style: italic;
+      font-size: 16px; line-height: 1.55;
+      letter-spacing: 0.1px;
+      color: var(--color-midnight-ink);
+      caret-color: var(--color-leadgen-red);
+      overflow-y: auto;
+    }
+    .aside-text::placeholder {
+      color: var(--color-muted-ash); opacity: 0.55;
+      font-style: italic;
+    }
+    .aside-foot {
+      color: var(--color-muted-ash);
+      font-size: 11px; letter-spacing: 0.3px;
+      opacity: 0.7;
+    }
+    .card.aside-open { animation: none; opacity: 0.94; transform: scale(0.992); }
+
+    /* Note attached to a log entry */
+    .log-item .lnote {
+      display: block;
+      margin-top: 8px;
+      padding-left: 10px;
+      border-left: 2px solid rgba(17,17,17,0.08);
+      font-family: var(--font-serif);
+      font-style: italic; font-weight: 300;
+      font-size: 13px; line-height: 1.5;
+      color: var(--color-muted-ash);
+      white-space: pre-wrap;
+      text-wrap: pretty;
+    }
+
     /* ──────── Misc ──────── */
     .empty-state .card-actions { opacity: 0.3; pointer-events: none; }
 
     @media (prefers-reduced-motion: reduce) {
       .card, .backdrop::before, .backdrop::after { animation: none; }
+      .aside-panel { transition: opacity 0.2s ease; }
     }
     @media (max-width: 600px) {
       .card { padding: 36px 24px 28px; }
@@ -1023,4 +1158,20 @@
       .manifesto-inner { padding: 44px 24px 32px; max-height: 86vh; }
       .manifesto h1 { font-size: 30px; margin-bottom: 22px; }
       .manifesto p { font-size: 17px; }
+
+      /* On small screens, the side panel becomes a bottom sheet */
+      .aside-tab { width: 24px; min-height: 96px; right: -18px; }
+      .aside-tab-label { font-size: 10px; }
+      .aside-panel {
+        top: auto; bottom: 0; right: 0; left: 0;
+        width: 100%; max-width: 100%;
+        max-height: 70vh;
+        transform: translateY(100%);
+        border-bottom-left-radius: 0;
+        border-bottom-right-radius: 0;
+        border-top-left-radius: 18px;
+        border-top-right-radius: 18px;
+        padding: 22px 20px 16px;
+      }
+      .aside-panel.open { transform: translateY(0); }
     }

@@ -14,8 +14,9 @@
     timerStart: null,
     counterStyle: 'count',
     onboarded: false,
-    log: {},          // { 'YYYY-MM-DD': [{text, ts}] }
+    log: {},          // { 'YYYY-MM-DD': [{text, ts, note?}] }
     lastSeen: null,   // YYYY-MM-DD of last app open
+    currentNote: '',  // free-form journal for the current task
   };
 
   let state = load();
@@ -99,6 +100,13 @@
   const addBtn = el('add-btn');
   const completeOverlay = el('complete-overlay');
   const motes = el('motes');
+  const asideTab = el('aside-tab');
+  const asidePanel = el('aside-panel');
+  const asideScrim = el('aside-scrim');
+  const asideText = el('aside-text');
+  const asideTask = el('aside-task');
+  const asideSub = el('aside-sub');
+  const asideClose = el('aside-close');
 
   /** ---------- Mood ---------- */
   function computeMood() {
@@ -181,12 +189,15 @@
     } else if (!v) {
       state.current = '';
       state.timerStart = null;
+      // No task means no aside note
+      state.currentNote = '';
     }
     editing = false;
     cardEl.classList.remove('editing');
     thingEl.blur();
     save();
     renderThing();
+    renderAside();
   }
 
   function cancelEdit() {
@@ -451,6 +462,12 @@
           <span class="ltime">${hh}:${mm}</span>
         `;
         r.querySelector('.ltext').textContent = it.text;
+        if (it.note) {
+          const n = document.createElement('span');
+          n.className = 'lnote';
+          n.textContent = it.note;
+          r.querySelector('.ltext').appendChild(n);
+        }
         dayWrap.appendChild(r);
       });
       logList.appendChild(dayWrap);
@@ -464,7 +481,9 @@
     if (state.current && state.current.trim()) state.stack.push(state.current);
     state.current = item;
     state.timerStart = Date.now();
-    save(); renderThing(); renderCounter(); renderDrawer();
+    // Promoting a different task — its note belongs to the previous one (already discarded)
+    state.currentNote = '';
+    save(); renderThing(); renderCounter(); renderDrawer(); renderAside();
     closeDrawer();
   }
 
@@ -477,7 +496,7 @@
     } else {
       state.stack.push(t);
     }
-    save(); renderThing(); renderCounter(); renderDrawer();
+    save(); renderThing(); renderCounter(); renderDrawer(); renderAside();
   }
   addBtn.addEventListener('click', () => { addToStack(addInput.value); addInput.value=''; addInput.focus(); });
   addInput.addEventListener('keydown', (e) => {
@@ -490,7 +509,13 @@
     const text = state.current;
     const today = todayISO();
     if (!state.log[today]) state.log[today] = [];
-    state.log[today].push({ text, ts: Date.now() });
+    const entry = { text, ts: Date.now() };
+    const note = (state.currentNote || '').trim();
+    if (note) entry.note = note;
+    state.log[today].push(entry);
+    // Clear the note — it's now committed to the log
+    state.currentNote = '';
+    if (asidePanel.classList.contains('open')) closeAside();
 
     // Run gentle completion overlay
     runCompletion();
@@ -508,6 +533,7 @@
         state.timerStart = next ? Date.now() : null;
         save();
         renderThing();
+        renderAside();
         thingEl.style.opacity = '1';
         setTimeout(() => { thingEl.style.transition = ''; }, 350);
       }, 300);
@@ -600,6 +626,87 @@
   manifestoClose.addEventListener('click', closeManifesto);
   manifestoEl.addEventListener('click', (e) => { if (e.target === manifestoEl) closeManifesto(); });
 
+  /** ---------- Aside (a note to self) ---------- */
+  const asidePrompts = [
+    "type through it. nobody's watching.",
+    "what's coming up?",
+    "what are you scared to do?",
+    "say the quiet part.",
+    "what would you write if no one read it?",
+  ];
+  let asideSaveTimer = null;
+
+  function renderAside() {
+    // Tab visibility: only when there's a current task
+    const hasCurrent = !!(state.current && state.current.trim());
+    asideTab.hidden = !hasCurrent;
+    asideTab.classList.toggle('has-note', !!(state.currentNote && state.currentNote.trim()));
+    // Echo current task in the panel header
+    if (hasCurrent) {
+      asideTask.textContent = state.current;
+      asideSub.classList.remove('empty');
+    } else {
+      asideSub.classList.add('empty');
+    }
+    // Reflect saved value into textarea when not actively editing
+    if (document.activeElement !== asideText) {
+      asideText.value = state.currentNote || '';
+    }
+  }
+
+  function openAside() {
+    if (!state.current || !state.current.trim()) return;
+    if (editing) commitEdit();
+    asideText.placeholder = asidePrompts[Math.floor(Math.random() * asidePrompts.length)];
+    asideText.value = state.currentNote || '';
+    asidePanel.classList.add('open');
+    asideScrim.classList.add('open');
+    asidePanel.setAttribute('aria-hidden', 'false');
+    cardEl.classList.add('aside-open');
+    setTimeout(() => asideText.focus(), 80);
+  }
+
+  function closeAside() {
+    flushAsideSave();
+    asidePanel.classList.remove('open');
+    asideScrim.classList.remove('open');
+    asidePanel.setAttribute('aria-hidden', 'true');
+    cardEl.classList.remove('aside-open');
+    renderAside();
+  }
+
+  function flushAsideSave() {
+    if (asideSaveTimer) { clearTimeout(asideSaveTimer); asideSaveTimer = null; }
+    const v = asideText.value;
+    if ((state.currentNote || '') !== v) {
+      state.currentNote = v;
+      save();
+    }
+  }
+
+  function scheduleAsideSave() {
+    if (asideSaveTimer) clearTimeout(asideSaveTimer);
+    asideSaveTimer = setTimeout(flushAsideSave, 250);
+  }
+
+  asideTab.addEventListener('click', (e) => { e.stopPropagation(); openAside(); });
+  asideTab.addEventListener('mousedown', (e) => { e.stopPropagation(); });
+  asideClose.addEventListener('click', closeAside);
+  asideScrim.addEventListener('click', closeAside);
+  asideText.addEventListener('input', scheduleAsideSave);
+  asideText.addEventListener('blur', flushAsideSave);
+  asideText.addEventListener('keydown', (e) => {
+    if (e.key === 'Escape') { e.preventDefault(); closeAside(); }
+  });
+  window.addEventListener('beforeunload', flushAsideSave);
+  // Esc anywhere closes the panel (slot into existing handler chain via separate listener)
+  document.addEventListener('keydown', (e) => {
+    if (e.key === 'Escape' && asidePanel.classList.contains('open')) {
+      // Only handle if the textarea isn't focused (its own handler will fire first)
+      if (document.activeElement !== asideText) closeAside();
+    }
+  });
+
   /** ---------- Greeting ---------- */
   function maybeShowGreeting() {
     const today = todayISO();
@@ -691,6 +798,7 @@
     renderSound();
     applyMood();
     tickTimer();
+    renderAside();
   }
 
   if (!state.onboarded) {

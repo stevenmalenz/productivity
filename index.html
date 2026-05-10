@@ -8,7 +8,7 @@
   <link rel="preconnect" href="https://fonts.gstatic.com">
   
   
-<link rel="stylesheet" href="styles.css?v=20260508a">
+<link rel="stylesheet" href="styles.css?v=20260510a">
 </head>
 <body>
   <div class="backdrop" id="backdrop"></div>
@@ -75,10 +75,32 @@
             </button>
           </div>
         </div>
+        <button class="aside-tab" id="aside-tab" aria-label="Open a note to self" hidden="">
+          <svg class="aside-tab-icon" width="11" height="11" viewBox="0 0 14 14" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+            <path d="M2 12 L2 4 a1 1 0 0 1 1 -1 L9 3 L12 6 L12 12 a1 1 0 0 1 -1 1 L3 13 a1 1 0 0 1 -1 -1 z"></path>
+            <path d="M9 3 L9 6 L12 6"></path>
+          </svg>
+          <span class="aside-tab-label">a note to self</span>
+          <span class="aside-tab-dot" aria-hidden="true"></span>
+        </button>
       </div>
       <div class="hint" id="hint"></div>
     </div>
   </div>
+
+  <!-- A note to self -->
+  <div class="aside-scrim" id="aside-scrim"></div>
+  <aside class="aside-panel" id="aside-panel" role="dialog" aria-label="A note to self" aria-hidden="true">
+    <div class="aside-head">
+      <div class="aside-title">a note to self</div>
+      <div class="aside-sub" id="aside-sub">while you're doing <em id="aside-task">this</em></div>
+      <button class="aside-close" id="aside-close" aria-label="Close">
+        <svg width="12" height="12" viewBox="0 0 14 14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><path d="M3 3l8 8M11 3l-8 8"></path></svg>
+      </button>
+    </div>
+    <textarea class="aside-text" id="aside-text" placeholder="type through it. nobody's watching." spellcheck="true"></textarea>
+    <div class="aside-foot"><kbd>esc</kbd> to close · saves as you type</div>
+  </aside>
 
   <!-- Gear + streak ring -->
   <div class="gear-wrap">
@@ -196,9 +218,9 @@
   <script src="assets/vendor/react.development.js"></script>
   <script src="assets/vendor/react-dom.development.js"></script>
   <script src="assets/vendor/babel-standalone.js"></script>
-  <script type="text/babel" src="assets/tweaks-panel.jsx?v=20260508a"></script>
-  <script src="assets/app.js?v=20260508a"></script>
-  <script type="text/babel" src="assets/tweaks-app.js?v=20260508a"></script>
+  <script type="text/babel" src="assets/tweaks-panel.jsx?v=20260510a"></script>
+  <script src="assets/app.js?v=20260510a"></script>
+  <script type="text/babel" src="assets/tweaks-app.js?v=20260510a"></script>
 
 
 </body></html>
