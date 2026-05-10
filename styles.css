@@ -1040,7 +1040,10 @@
 
     /* ──────── A note to self (aside) ──────── */
     .aside-tab {
-      position: absolute; top: 50%; right: -28px;
+      /* Centered between the card's right edge and the viewport edge.
+         Card width = min(560px, 86vw); tab width = 28px. */
+      position: absolute; top: 50%;
+      right: calc(min(140px, 21.5vw) - 25vw - 14px);
       transform: translate(0, -50%);
       width: 28px; min-height: 116px;
       display: inline-flex; flex-direction: column;
@@ -1061,7 +1064,6 @@
     .aside-tab[hidden] { display: none; }
     .aside-tab:hover {
       opacity: 1; color: var(--color-midnight-ink);
-      background: rgba(255,251,245,0.92);
     }
     .aside-tab-icon { opacity: 0.85; }
     .aside-tab-label {
