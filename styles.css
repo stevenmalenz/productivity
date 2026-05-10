@@ -1040,7 +1040,7 @@
 
     /* ──────── A note to self (aside) ──────── */
     .aside-tab {
-      position: absolute; top: 50%; right: -34px;
+      position: absolute; top: 50%; right: -26px;
       transform: translate(0, -50%);
       width: 28px; min-height: 116px;
       display: inline-flex; flex-direction: column;
@@ -1114,18 +1114,6 @@
       font-size: 18px; letter-spacing: -0.3px;
       color: var(--color-midnight-ink);
     }
-    .aside-sub {
-      font-size: 11px; letter-spacing: 0.3px;
-      color: var(--color-muted-ash);
-      text-transform: uppercase; font-weight: 500;
-      overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
-    }
-    .aside-sub em {
-      font-style: normal; color: var(--color-midnight-ink);
-      text-transform: none; letter-spacing: 0.1px;
-      font-weight: 400; opacity: 0.75;
-    }
-    .aside-sub.empty { display: none; }
     .aside-close {
       position: absolute; top: -6px; right: -10px;
       border: 0; background: transparent;
@@ -1156,8 +1144,6 @@
       font-size: 11px; letter-spacing: 0.3px;
       opacity: 0.7;
     }
-    .card.aside-open { animation: none; opacity: 0.94; transform: scale(0.992); }
-
     /* Note attached to a log entry */
     .log-item .lnote {
       display: block;
@@ -1191,7 +1177,7 @@
       .manifesto p { font-size: 17px; }
 
       /* On small screens, the side panel becomes a bottom sheet */
-      .aside-tab { width: 24px; min-height: 96px; right: -28px; }
+      .aside-tab { width: 24px; min-height: 96px; right: -20px; }
       .aside-tab-label { font-size: 10px; }
       .aside-panel {
         top: auto; bottom: 0; right: 0; left: 0;

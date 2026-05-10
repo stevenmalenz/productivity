@@ -104,8 +104,6 @@
   const asidePanel = el('aside-panel');
   const asideScrim = el('aside-scrim');
   const asideText = el('aside-text');
-  const asideTask = el('aside-task');
-  const asideSub = el('aside-sub');
   const asideClose = el('aside-close');
 
   /** ---------- Mood ---------- */
@@ -652,13 +650,6 @@
     const hasCurrent = !!(state.current && state.current.trim());
     asideTab.hidden = !hasCurrent;
     asideTab.classList.toggle('has-note', !!(state.currentNote && state.currentNote.trim()));
-    // Echo current task in the panel header
-    if (hasCurrent) {
-      asideTask.textContent = state.current;
-      asideSub.classList.remove('empty');
-    } else {
-      asideSub.classList.add('empty');
-    }
     // Reflect saved value into textarea when not actively editing
     if (document.activeElement !== asideText) {
       asideText.value = state.currentNote || '';
@@ -673,7 +664,6 @@
     asidePanel.classList.add('open');
     asideScrim.classList.add('open');
     asidePanel.setAttribute('aria-hidden', 'false');
-    cardEl.classList.add('aside-open');
     setTimeout(() => asideText.focus(), 80);
   }
 
@@ -682,7 +672,6 @@
     asidePanel.classList.remove('open');
     asideScrim.classList.remove('open');
     asidePanel.setAttribute('aria-hidden', 'true');
-    cardEl.classList.remove('aside-open');
     renderAside();
   }
 
