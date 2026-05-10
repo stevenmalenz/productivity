@@ -1073,8 +1073,8 @@
 
     /* ──────── A note to self (aside) ──────── */
     .aside-tab {
-      /* Pinned to the card's right edge with a small gap, so it scales with the box. */
-      position: absolute; top: 50%; right: -34px;
+      /* Flush against the card's right edge so it visually attaches to the box. */
+      position: absolute; top: 50%; right: -28px;
       transform: translate(0, -50%);
       width: 28px; min-height: 116px;
       display: inline-flex; flex-direction: column;
@@ -1098,10 +1098,11 @@
     }
     .aside-tab-icon-wrap {
       position: relative;
-      display: inline-flex;
-      align-items: center; justify-content: center;
+      display: block;
+      width: 11px; height: 11px;
+      flex: 0 0 auto;
     }
-    .aside-tab-icon { opacity: 0.85; }
+    .aside-tab-icon { display: block; opacity: 0.85; }
     .aside-tab-label {
       writing-mode: vertical-rl;
       transform: rotate(180deg);
@@ -1112,7 +1113,7 @@
     }
     /* Notification dot sits on the corner of the paper icon */
     .aside-tab-dot {
-      position: absolute; top: -2px; right: -3px;
+      position: absolute; top: -3px; right: -3px;
       width: 5px; height: 5px; border-radius: 50%;
       background: var(--color-leadgen-red);
       opacity: 0; transform: scale(0.6);
@@ -1138,8 +1139,8 @@
       width: min(360px, 90vw); max-height: min(560px, 80vh);
       display: flex; flex-direction: column; gap: 12px;
       padding: 26px 24px 18px;
-      background: #fffbf5;
-      border-radius: 16px;
+      background: var(--color-canvas-white);
+      border-radius: 18px;
       box-shadow: var(--shadow-xl);
       opacity: 0; pointer-events: none;
       transition: opacity 0.28s ease, transform 0.32s cubic-bezier(.2,.8,.2,1);
@@ -1218,7 +1219,7 @@
       .manifesto p { font-size: 17px; }
 
       /* On small screens, the side panel becomes a bottom sheet */
-      .aside-tab { width: 24px; min-height: 96px; right: -20px; }
+      .aside-tab { width: 24px; min-height: 96px; right: -24px; }
       .aside-tab-label { font-size: 10px; }
       .aside-panel {
         top: auto; bottom: 0; right: 0; left: 0;
