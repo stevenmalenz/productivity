@@ -32,11 +32,17 @@
     try { localStorage.setItem(STORE_KEY, JSON.stringify(state)); } catch (e) {}
   }
 
-  function todayISO() { return new Date().toISOString().slice(0, 10); }
+  function isoFromDate(d) {
+    const y = d.getFullYear();
+    const m = String(d.getMonth() + 1).padStart(2, '0');
+    const dd = String(d.getDate()).padStart(2, '0');
+    return `${y}-${m}-${dd}`;
+  }
+  function todayISO() { return isoFromDate(new Date()); }
   function shiftISO(iso, days) {
     const d = new Date(iso + 'T00:00:00');
     d.setDate(d.getDate() + days);
-    return d.toISOString().slice(0, 10);
+    return isoFromDate(d);
   }
 
   /** ---------- Streak (consecutive days with at least 1 done) ---------- */
@@ -292,7 +298,7 @@
 
   function updateDocTitle() {
     const cur = (state.current || '').trim();
-    if (!cur) { document.title = 'One thing.'; return; }
+    if (!cur) { document.title = "What's next?"; return; }
     const truncated = cur.length > 40 ? cur.slice(0, 37) + '…' : cur;
     if (state.timerStart) {
       document.title = `${fmt(Date.now() - state.timerStart)} · ${truncated}`;
