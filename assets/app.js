@@ -503,6 +503,14 @@
     scrim.classList.remove('open');
   }
   scrim.addEventListener('click', closeDrawer);
+
+  // Clicking "X done today" opens the log directly — no need to detour
+  // through the gear popover.
+  const statusPill = document.querySelector('.status .pill');
+  if (statusPill) {
+    statusPill.style.cursor = 'pointer';
+    statusPill.addEventListener('click', () => openDrawer('log'));
+  }
   document.addEventListener('keydown', (e) => {
     if (e.key === 'Escape') {
       if (drawer.classList.contains('open')) closeDrawer();
@@ -518,7 +526,7 @@
     if (tab === 'queue') {
       queuePane.style.display = '';
       logList.style.display = 'none';
-      drawerTitle.textContent = 'In the wings';
+      drawerTitle.textContent = 'Coming up';
       drawerSub.textContent = 'Drag to reorder. Click to make it the one.';
       renderDrawer();
     } else {

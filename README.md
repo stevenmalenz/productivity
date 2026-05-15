@@ -8,7 +8,7 @@ A single-task focus app. One card on screen, until it's done. Then the next thin
 
 - Onboarding flow that captures the first "one thing"
 - Editable card with a running timer
-- Queue ("In the wings") and today's log, in a drawer
+- Queue ("Coming up") and today's log, in a drawer
 - Streak ring around a settings gear
 - Time-of-day backdrop (auto / dawn / day / dusk / night)
 - Optional chime on done
