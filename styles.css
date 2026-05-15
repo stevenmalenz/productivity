@@ -570,33 +570,6 @@
       opacity: 0.35; cursor: not-allowed;
       transform: none; background: var(--color-midnight-ink);
       box-shadow: 0 1px 2px rgba(17,17,17,0.12);
-      animation: none;
-    }
-    /* Idle "ready" glow — the button gently emanates a green halo every
-       4s when enabled and at rest. Subtle delight that says "I'm here
-       when you are." Pauses on hover/active so it doesn't fight the
-       explicit hover state. */
-    @keyframes done-breathe {
-      0%, 100% {
-        box-shadow:
-          0 1px 2px rgba(17,17,17,0.18),
-          0 0 0 0 rgba(71,208,150,0);
-      }
-      50% {
-        box-shadow:
-          0 4px 14px -4px rgba(17,17,17,0.22),
-          0 0 0 6px rgba(71,208,150,0.10);
-      }
-    }
-    .btn-primary:not(:disabled) {
-      animation: done-breathe 4s ease-in-out infinite;
-    }
-    .btn-primary:hover:not(:disabled),
-    .btn-primary:active:not(:disabled) {
-      animation: none;
-    }
-    @media (prefers-reduced-motion: reduce) {
-      .btn-primary:not(:disabled) { animation: none; }
     }
     .btn-ghost {
       background: transparent; color: var(--color-muted-ash); padding: 11px 14px;
@@ -879,30 +852,37 @@
       padding-top: 2px;
     }
 
-    /* ──────── Released celebration ──────── */
-    /* When you X out a task, this is the closing gesture — parallel to
-       Mark done but quieter and more wistful. Lives bottom-center, fades
+    /* ──────── Released pill ──────── */
+    /* Small pill that echoes the "X done today" status pill — same
+       backdrop, same shape, same proportions — so the closing gesture
+       reads as intentional rather than flashy. Sits low-center, fades
        in for ~1.4s with a small puff of motes drifting upward. */
     .released-toast {
-      position: fixed; bottom: 22vh; left: 50%;
+      position: fixed; bottom: 92px; left: 50%;
       transform: translateX(-50%);
-      display: inline-flex; align-items: baseline; gap: 12px;
+      display: inline-flex; align-items: center; gap: 8px;
+      padding: 6px 14px;
+      background: rgba(255,255,255,0.6);
+      backdrop-filter: blur(12px);
+      -webkit-backdrop-filter: blur(12px);
+      border-radius: 999px;
+      box-shadow: rgba(17,17,17,0.04) 0px 1px 2px 0px;
       font-family: var(--font-serif);
       font-style: italic; font-weight: 300;
-      font-size: 34px; letter-spacing: -0.6px;
+      font-size: 14px; letter-spacing: 0.1px;
       color: var(--color-midnight-ink);
       opacity: 0; pointer-events: none;
       z-index: 38;
-      transition: opacity 0.4s ease;
       white-space: nowrap;
     }
     .released-toast.show { opacity: 1; }
     .released-word { font-style: italic; }
     .released-emoji {
       font-style: normal;
-      font-size: 32px;
+      font-size: 14px;
       display: inline-block;
       transform-origin: center;
+      line-height: 1;
     }
     .released-motes {
       position: fixed; inset: 0;
@@ -911,15 +891,11 @@
     }
     .release-mote {
       position: absolute;
-      width: 6px; height: 6px;
+      width: 5px; height: 5px;
       border-radius: 50%;
       opacity: 0;
       filter: blur(0.5px);
       will-change: transform, opacity;
-    }
-    @media (max-width: 600px) {
-      .released-toast { font-size: 26px; bottom: 24vh; }
-      .released-emoji { font-size: 24px; }
     }
 
     /* ──────── Completion overlay ──────── */
