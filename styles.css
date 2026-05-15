@@ -575,14 +575,13 @@
         opacity 0.25s ease;
     }
     .btn-primary:hover:not(:disabled) {
-      transform: translateY(-2px);
       background: #1a1a1a;
       box-shadow:
         0 8px 22px -6px rgba(17,17,17,0.34),
         0 0 0 4px rgba(71,208,150,0.14);
     }
     .btn-primary:active:not(:disabled) {
-      transform: translateY(0) scale(0.97);
+      transform: scale(0.97);
       transition-duration: 90ms;
       box-shadow:
         0 2px 6px rgba(17,17,17,0.22),

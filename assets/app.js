@@ -870,18 +870,17 @@
     const svg = doneBtn.querySelector('svg');
     const poly = svg && svg.querySelector('polyline');
 
-    // Hover: -2px lift + the check polyline draws itself (anticipation).
-    // Motion's pathLength handles SVG draw natively (0 to 1).
+    // Hover: the check polyline draws itself (anticipation). No lift —
+    // button stays put. Motion's pathLength handles SVG draw natively.
     doneBtn.addEventListener('mouseenter', () => {
       if (doneBtn.disabled) return;
-      mAnimate(doneBtn, { y: -2 }, softSpring);
       if (poly) {
         mAnimate(poly, { pathLength: [0, 1] },
           { duration: 0.55, ease: 'easeOut' });
       }
     });
     doneBtn.addEventListener('mouseleave', () => {
-      mAnimate(doneBtn, { y: 0 }, softSpring);
+      // Clear inline draw state so the path is fully visible at rest.
       if (poly) {
         poly.style.strokeDasharray = '';
         poly.style.strokeDashoffset = '';
