@@ -179,10 +179,6 @@
   <!-- Drawer -->
   <div class="scrim" id="scrim"></div>
   <div class="drawer" id="drawer" role="dialog" aria-label="Queue and log">
-    <div class="drawer-head">
-      <h2 id="drawer-title">Coming up</h2>
-      <span class="sub" id="drawer-sub">Drag to reorder. Click to make it the one.</span>
-    </div>
     <div class="drawer-tabs">
       <button class="drawer-tab active" data-tab="queue">Coming up</button>
       <button class="drawer-tab" data-tab="log">Today's log</button>
@@ -192,9 +188,9 @@
         <input id="add-input" placeholder="Add the next thing…">
         <button id="add-btn">Add</button>
       </div>
-      <div class="drawer-list" id="drawer-list" data-empty="Nothing waiting. Add something to do next."></div>
+      <div class="drawer-list" id="drawer-list"></div>
     </div>
-    <div class="drawer-list" id="log-list" data-empty="Nothing done yet today. The first one's the hardest." style="display:none;"></div>
+    <div class="drawer-list" id="log-list" style="display:none;"></div>
   </div>
 
   <!-- Released celebration (off-the-plate moments) -->

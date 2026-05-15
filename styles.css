@@ -787,11 +787,6 @@
       display: flex; flex-direction: column; gap: 14px;
     }
     .drawer.open { transform: translateY(0); }
-    .drawer-head { display: flex; align-items: baseline; justify-content: space-between; }
-    .drawer-head h2 {
-      margin: 0; font-size: 22px; letter-spacing: -0.5px; font-weight: 500;
-    }
-    .drawer-head .sub { color: var(--color-muted-ash); font-size: 12px; }
     .drawer-tabs {
       display: flex; gap: 6px; padding: 3px;
       background: var(--color-whisper-gray);
@@ -813,12 +808,6 @@
       display: flex; flex-direction: column; gap: 6px;
       overflow-y: auto; padding: 4px 2px 12px;
       max-height: 50vh;
-    }
-    .drawer-list:empty::before {
-      content: attr(data-empty);
-      color: var(--color-muted-ash);
-      font-size: 13px; padding: 32px 8px;
-      text-align: center; display: block;
     }
     .stack-item {
       display: flex; align-items: center; gap: 12px;

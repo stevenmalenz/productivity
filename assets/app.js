@@ -99,8 +99,6 @@
   const drawer = el('drawer');
   const drawerList = el('drawer-list');
   const logList = el('log-list');
-  const drawerTitle = el('drawer-title');
-  const drawerSub = el('drawer-sub');
   const queuePane = el('queue-pane');
   const addInput = el('add-input');
   const addBtn = el('add-btn');
@@ -526,14 +524,10 @@
     if (tab === 'queue') {
       queuePane.style.display = '';
       logList.style.display = 'none';
-      drawerTitle.textContent = 'Coming up';
-      drawerSub.textContent = 'Drag to reorder. Click to make it the one.';
       renderDrawer();
     } else {
       queuePane.style.display = 'none';
       logList.style.display = '';
-      drawerTitle.textContent = "Today's log";
-      drawerSub.textContent = 'Calm proof you showed up.';
       renderLog();
     }
   }
