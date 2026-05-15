@@ -249,8 +249,21 @@
     if (editing) return;
     editing = true;
     editBuffer = state.current || '';
+
+    // The empty → editing flip used to snap (placeholder vanishing,
+    // greyed actions, meta swapped to edit-bar all at once). Now each
+    // piece transitions: the placeholder fades via a CSS variable
+    // (.thing.empty::before opacity transition), the actions row
+    // un-greys via the .empty-state opacity transition, and meta ↔
+    // edit-bar crossfade via their grid-stacked opacity. The .empty
+    // class stays through the edit — the :not(:empty)::before rule
+    // hides the pseudo the moment any text is typed, and clearing the
+    // inline variable on exit lets it fade back in if needed.
+    if (thingEl.classList.contains('empty')) {
+      thingEl.style.setProperty('--placeholder-opacity', '0');
+    }
     cardEl.classList.add('editing');
-    thingEl.classList.remove('empty');
+    cardWrap.classList.remove('empty-state');
     if (!thingEl.textContent) thingEl.textContent = '';
     thingEl.focus();
     placeCaretAtEnd(thingEl);
@@ -281,6 +294,7 @@
     }
     editing = false;
     cardEl.classList.remove('editing');
+    thingEl.style.removeProperty('--placeholder-opacity');
     thingEl.blur();
     save();
     renderThing();
@@ -291,6 +305,7 @@
     if (!editing) return;
     editing = false;
     cardEl.classList.remove('editing');
+    thingEl.style.removeProperty('--placeholder-opacity');
     thingEl.textContent = state.current || '';
     thingEl.blur();
     renderThing();
