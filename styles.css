@@ -392,6 +392,12 @@
       -webkit-backdrop-filter: blur(12px);
       border-radius: 999px;
       box-shadow: rgba(17,17,17,0.04) 0px 1px 2px 0px;
+      transition: background 0.2s ease, box-shadow 0.2s ease, color 0.2s ease;
+    }
+    .status .pill:hover {
+      background: rgba(255,255,255,0.85);
+      color: var(--color-midnight-ink);
+      box-shadow: rgba(17,17,17,0.08) 0px 2px 6px 0px;
     }
     .status .live {
       width: 6px; height: 6px; border-radius: 50%;
