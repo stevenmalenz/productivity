@@ -147,6 +147,9 @@
   const ease = [0.2, 0.8, 0.2, 1];
 
   // Hover/press helpers — graceful no-op if Motion not loaded.
+  // Only target elements that don't have positioning transforms — animating
+  // transform on a centered element breaks centering. Stack items, swatches,
+  // and the gear are fair game; the counter and aside-tab are NOT.
   if (motionOn && M.hover) {
     M.hover('.stack-item', (target) => {
       mAnimate(target, { scale: 1.012 }, { duration: 0.2, ease });
@@ -156,22 +159,11 @@
       mAnimate(target, { scale: 1.18 }, softSpring);
       return () => mAnimate(target, { scale: 1 }, softSpring);
     });
-    M.hover('.gear', (target) => {
-      mAnimate(target, { rotate: 40 }, springy);
-      return () => mAnimate(target, { rotate: 0 }, softSpring);
-    });
-    M.hover('.counter', (target) => {
-      mAnimate(target, { scale: 1.04 }, springy);
-      return () => mAnimate(target, { scale: 1 }, softSpring);
-    });
   }
   if (motionOn && M.press) {
     M.press('.swatch', (target) => {
       mAnimate(target, { scale: [1.18, 0.85, 1.2, 1] },
                { duration: 0.55, ease: 'easeOut' });
-    });
-    M.press('.gear', (target) => {
-      mAnimate(target, { rotate: [0, 90] }, snappy);
     });
   }
 
@@ -446,11 +438,6 @@
         mini.appendChild(c);
       });
       counterZone.insertBefore(mini, counterBtn);
-      if (motionOn) {
-        mAnimate(mini.querySelectorAll('.ms-card'),
-          { opacity: [0, null], y: [10, 0] },
-          { duration: 0.45, delay: mStagger(0.05), ease });
-      }
     }
   }
   counterBtn.addEventListener('mouseenter', () => {
@@ -467,11 +454,6 @@
       c.style.transform = `scale(${0.92 + i * 0.04})`;
       mini.appendChild(c);
     });
-    if (motionOn) {
-      mAnimate(mini.querySelectorAll('.ms-card'),
-        { opacity: [0, null], y: [12, 0] },
-        { duration: 0.4, delay: mStagger(0.06), ease });
-    }
   });
   counterBtn.addEventListener('mouseleave', () => {
     if (state.counterStyle !== 'expand') return;
@@ -482,32 +464,22 @@
   });
   counterBtn.addEventListener('click', () => openDrawer('queue'));
 
-  /** ---------- Drawer (queue + log) ---------- */
+  /** ---------- Drawer (queue + log) ----------
+   * CSS owns the slide-up — it uses transform: translateY for the off-screen
+   * state, and animating Motion's `y` over that fights the .open class.
+   * Motion only adds the row stagger inside the drawer.
+   */
   let activeTab = 'queue';
   function openDrawer(tab) {
     setTab(tab || 'queue');
     drawer.classList.add('open');
     scrim.classList.add('open');
-    if (motionOn) {
-      mAnimate(drawer, { y: ['100%', '0%'] },
-               { type: 'spring', stiffness: 280, damping: 30 });
-      mAnimate(scrim, { opacity: [0, 1] }, { duration: 0.25, ease });
-      staggerActiveDrawerRows(0.12);
-    }
+    if (motionOn) staggerActiveDrawerRows(0.18);
     setTimeout(() => activeTab === 'queue' && addInput.focus(), 200);
   }
   function closeDrawer() {
-    if (motionOn) {
-      mAnimate(scrim, { opacity: [1, 0] }, { duration: 0.2, ease });
-      mAnimate(drawer, { y: ['0%', '100%'] }, { duration: 0.32, ease })
-        .finished.then(() => {
-          drawer.classList.remove('open');
-          scrim.classList.remove('open');
-        }).catch(() => {});
-    } else {
-      drawer.classList.remove('open');
-      scrim.classList.remove('open');
-    }
+    drawer.classList.remove('open');
+    scrim.classList.remove('open');
   }
   scrim.addEventListener('click', closeDrawer);
   document.addEventListener('keydown', (e) => {
@@ -744,22 +716,8 @@
     affirmEl.textContent = word;
     if (affirmTimer) clearTimeout(affirmTimer);
     affirmEl.classList.add('show');
-    if (motionOn) {
-      // Soft spring up + slight blur clear, then sigh back down.
-      mAnimate(affirmEl,
-        { opacity: [0, 1], y: [10, 0], filter: ['blur(3px)', 'blur(0px)'] },
-        { type: 'spring', stiffness: 240, damping: 26 });
-    }
     affirmTimer = setTimeout(() => {
-      if (motionOn) {
-        mAnimate(affirmEl,
-          { opacity: [1, 0], y: [0, -6], filter: ['blur(0px)', 'blur(2px)'] },
-          { duration: 0.5, ease })
-          .finished.then(() => affirmEl.classList.remove('show'))
-          .catch(() => affirmEl.classList.remove('show'));
-      } else {
-        affirmEl.classList.remove('show');
-      }
+      affirmEl.classList.remove('show');
     }, 1100);
   }
 
@@ -925,28 +883,22 @@
     } catch (e) {}
   }
 
-  /** ---------- Popover ---------- */
+  /** ---------- Popover ----------
+   * CSS owns the open/close transform + opacity transition (it already
+   * scales up nicely from bottom-left). Motion only adds a row stagger
+   * for delight, and never animates the popover container itself — that
+   * was racing with the .open class and causing flicker.
+   */
   function openPopover() {
     popoverEl.classList.add('open');
     if (motionOn) {
-      mAnimate(popoverEl,
-        { opacity: [0, 1], scale: [0.92, 1], y: [8, 0] },
-        { type: 'spring', stiffness: 360, damping: 26 });
       const rows = popoverEl.querySelectorAll('.pop-title, .pop-row, .pop-divider');
-      mAnimate(rows, { opacity: [0, 1], y: [6, 0] },
-        { duration: 0.4, delay: mStagger(0.025, { start: 0.05 }), ease });
+      mAnimate(rows, { opacity: [0, 1] },
+        { duration: 0.32, delay: mStagger(0.025, { start: 0.08 }), ease });
     }
   }
   function closePopover() {
-    if (motionOn) {
-      mAnimate(popoverEl,
-        { opacity: [1, 0], scale: [1, 0.96], y: [0, 6] },
-        { duration: 0.18, ease })
-        .finished.then(() => popoverEl.classList.remove('open'))
-        .catch(() => popoverEl.classList.remove('open'));
-    } else {
-      popoverEl.classList.remove('open');
-    }
+    popoverEl.classList.remove('open');
   }
   gearBtn.addEventListener('click', (e) => {
     e.stopPropagation();
@@ -1012,26 +964,15 @@
   function openManifesto() {
     manifestoEl.classList.add('open');
     if (motionOn) {
-      mAnimate(manifestoEl, { opacity: [0, 1] }, { duration: 0.3, ease });
-      const inner = manifestoEl.querySelector('.manifesto-inner');
-      mAnimate(inner,
-        { opacity: [0, 1], scale: [0.96, 1], y: [12, 0] },
-        { type: 'spring', stiffness: 280, damping: 28 });
+      // The h1 / paragraphs / signoff don't have positioning transforms,
+      // so a stagger is safe. The backdrop fade is owned by CSS.
       const parts = manifestoEl.querySelectorAll(
         '.manifesto h1, .manifesto p, .manifesto .signoff');
       mAnimate(parts, { opacity: [0, 1], y: [10, 0] },
-        { duration: 0.5, delay: mStagger(0.07, { start: 0.18 }), ease });
+        { duration: 0.5, delay: mStagger(0.06, { start: 0.18 }), ease });
     }
   }
-  function closeManifesto() {
-    if (motionOn) {
-      mAnimate(manifestoEl, { opacity: [1, 0] }, { duration: 0.22, ease })
-        .finished.then(() => manifestoEl.classList.remove('open'))
-        .catch(() => manifestoEl.classList.remove('open'));
-    } else {
-      manifestoEl.classList.remove('open');
-    }
-  }
+  function closeManifesto() { manifestoEl.classList.remove('open'); }
   manifestoClose.addEventListener('click', closeManifesto);
   manifestoEl.addEventListener('click', (e) => { if (e.target === manifestoEl) closeManifesto(); });
 
@@ -1051,7 +992,6 @@
   function renderAside() {
     // Tab visibility: only when there's a current task
     const hasCurrent = !!(state.current && state.current.trim());
-    const wasHidden = asideTab.hidden;
     asideTab.hidden = !hasCurrent;
     const hasNote = !!(state.currentNote && state.currentNote.trim());
     asideTab.classList.toggle('has-note', hasNote);
@@ -1059,18 +999,12 @@
     if (document.activeElement !== asideText) {
       asideText.value = state.currentNote || '';
     }
-    if (motionOn) {
-      // Tab becomes visible — slide in from the card's right edge.
-      if (wasHidden && hasCurrent) {
-        mAnimate(asideTab, { opacity: [0, 1], x: [-8, 0] },
-          { type: 'spring', stiffness: 320, damping: 26 });
-      }
-      // Note dot just turned on — small celebratory bump.
-      if (!prevHasNote && hasNote) {
-        const dot = asideTab.querySelector('.aside-tab-dot');
-        if (dot) mAnimate(dot, { scale: [0.5, 1.6, 1] },
-          { duration: 0.55, ease: 'easeOut' });
-      }
+    // Note dot just turned on — small celebratory bump on the dot only
+    // (the dot has no positioning transform, so this is safe).
+    if (motionOn && !prevHasNote && hasNote) {
+      const dot = asideTab.querySelector('.aside-tab-dot');
+      if (dot) mAnimate(dot, { scale: [0.5, 1.6, 1] },
+        { duration: 0.55, ease: 'easeOut' });
     }
     prevHasNote = hasNote;
   }
@@ -1083,32 +1017,15 @@
     asidePanel.classList.add('open');
     asideScrim.classList.add('open');
     asidePanel.setAttribute('aria-hidden', 'false');
-    if (motionOn) {
-      mAnimate(asideScrim, { opacity: [0, 1] }, { duration: 0.25, ease });
-      mAnimate(asidePanel,
-        { opacity: [0, 1], x: [24, 0] },
-        { type: 'spring', stiffness: 320, damping: 28 });
-    }
     setTimeout(() => asideText.focus(), 80);
   }
 
   function closeAside() {
     flushAsideSave();
+    asidePanel.classList.remove('open');
+    asideScrim.classList.remove('open');
     asidePanel.setAttribute('aria-hidden', 'true');
-    if (motionOn) {
-      mAnimate(asideScrim, { opacity: [1, 0] }, { duration: 0.22, ease })
-        .finished.then(() => asideScrim.classList.remove('open'))
-        .catch(() => asideScrim.classList.remove('open'));
-      mAnimate(asidePanel,
-        { opacity: [1, 0], x: [0, 18] },
-        { duration: 0.26, ease })
-        .finished.then(() => { asidePanel.classList.remove('open'); renderAside(); })
-        .catch(() => { asidePanel.classList.remove('open'); renderAside(); });
-    } else {
-      asidePanel.classList.remove('open');
-      asideScrim.classList.remove('open');
-      renderAside();
-    }
+    renderAside();
   }
 
   function flushAsideSave() {
@@ -1158,43 +1075,29 @@
     const word = yest.length === 1 ? 'one thing' : `${yest.length} things`;
     const phrase = `Yesterday you did ${word}.`;
     if (motionOn) {
-      // Split into words so each lifts in with stagger.
+      // Words live inside the centered container, so animating their opacity
+      // and y is safe — it doesn't disturb the parent's centering transform.
       const wordSpans = phrase.split(' ').map(w =>
         `<span class="g-word" style="display:inline-block;white-space:pre;">${w} </span>`
       ).join('');
       greetingEl.innerHTML = `${wordSpans}<span class="sub">Today's a fresh page.</span>`;
       greetingEl.classList.add('show');
-      greetingEl.style.opacity = '1';
       mAnimate(greetingEl.querySelectorAll('.g-word'),
-        { opacity: [0, 1], y: [14, 0], filter: ['blur(6px)', 'blur(0px)'] },
-        { duration: 0.7, delay: mStagger(0.07, { start: 0.15 }), ease });
+        { opacity: [0, 1], y: [10, 0] },
+        { duration: 0.6, delay: mStagger(0.07, { start: 0.15 }), ease });
       mAnimate(greetingEl.querySelector('.sub'),
-        { opacity: [0, 1], y: [8, 0] },
+        { opacity: [0, 1] },
         { duration: 0.6, delay: 0.9, ease });
     } else {
       greetingEl.innerHTML = `Yesterday you did ${word}.<span class="sub">Today's a fresh page.</span>`;
       setTimeout(() => greetingEl.classList.add('show'), 200);
     }
-    setTimeout(() => {
-      if (motionOn) {
-        mAnimate(greetingEl,
-          { opacity: [1, 0], y: [0, -8], filter: ['blur(0px)', 'blur(4px)'] },
-          { duration: 0.6, ease });
-      } else {
-        greetingEl.classList.remove('show');
-      }
-    }, 3200);
+    setTimeout(() => greetingEl.classList.remove('show'), 3200);
     setTimeout(() => {
       greetingEl.style.display = 'none';
       cardWrap.classList.remove('hidden');
-      if (motionOn) {
-        mAnimate(cardEl,
-          { opacity: [0, 1], scale: [0.96, 1], y: [16, 0] },
-          { type: 'spring', stiffness: 240, damping: 26 });
-      } else {
-        cardEl.classList.add('entering');
-        setTimeout(() => cardEl.classList.remove('entering'), 800);
-      }
+      cardEl.classList.add('entering');
+      setTimeout(() => cardEl.classList.remove('entering'), 800);
     }, 3700);
   }
 
@@ -1245,17 +1148,8 @@
       onboardEl.hidden = true;
       onboardEl.classList.remove('fade');
       renderThing();
-      if (motionOn) {
-        mAnimate(cardEl,
-          { opacity: [0, 1], scale: [0.94, 1], y: [24, 0] },
-          { type: 'spring', stiffness: 220, damping: 24 });
-        mAnimate(cardWrap.querySelector('.label'),
-          { opacity: [0, 1], y: [-6, 0] },
-          { duration: 0.6, delay: 0.15, ease });
-      } else {
-        cardEl.classList.add('entering');
-        setTimeout(() => cardEl.classList.remove('entering'), 800);
-      }
+      cardEl.classList.add('entering');
+      setTimeout(() => cardEl.classList.remove('entering'), 800);
     }, 700);
   }
   document.querySelectorAll('[data-next]').forEach(b => {
@@ -1297,25 +1191,6 @@
     renderAll();
   } else {
     renderAll();
-    // If the greeting will play, it handles its own entrance.
-    // Otherwise spring the card + status pill + counter in on first paint.
-    const greetingWillPlay = (() => {
-      const t = todayISO();
-      const yest = state.log[shiftISO(t, -1)] || [];
-      return yest.length && state.lastSeen !== t;
-    })();
-    if (motionOn && !greetingWillPlay) {
-      mAnimate(cardEl,
-        { opacity: [0, 1], scale: [0.96, 1], y: [16, 0] },
-        { type: 'spring', stiffness: 240, damping: 26 });
-      mAnimate(cardWrap.querySelector('.label'),
-        { opacity: [0, 1], y: [-6, 0] },
-        { duration: 0.6, delay: 0.15, ease });
-      mAnimate('.status .pill', { opacity: [0, 1], y: [-8, 0] },
-        { duration: 0.5, delay: 0.25, ease });
-      mAnimate('.counter, .gear-wrap', { opacity: [0, null], y: [12, 0] },
-        { duration: 0.5, delay: mStagger(0.08, { start: 0.35 }), ease });
-    }
     maybeShowGreeting();
   }
   setInterval(applyMood, 60000);
