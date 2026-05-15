@@ -608,7 +608,28 @@
       position: fixed; bottom: 28px; left: 28px; z-index: 30;
       width: 52px; height: 52px;
     }
-    .gear-ring { display: none; }
+    .gear-ring {
+      position: absolute; inset: 0;
+      width: 52px; height: 52px;
+      transform: rotate(-90deg);
+      opacity: 0.55;
+      transition: opacity 0.2s ease;
+      pointer-events: none;
+    }
+    .gear-ring .bg {
+      fill: none;
+      stroke: rgba(17,17,17,0.06);
+      stroke-width: 1.5;
+    }
+    .gear-ring .fg {
+      fill: none;
+      stroke: var(--color-engagement-gold);
+      stroke-width: 1.6;
+      stroke-linecap: round;
+      transition: stroke-dashoffset 0.6s cubic-bezier(.2,.8,.2,1);
+    }
+    .gear-ring.dim { opacity: 0.25; }
+    .gear-wrap:hover .gear-ring { opacity: 0.9; }
     .gear {
       position: absolute; inset: 6px;
       width: 40px; height: 40px;
@@ -618,9 +639,9 @@
       cursor: pointer;
       color: var(--color-muted-ash);
       opacity: 0.55;
-      transition: transform 0.4s ease, color 0.2s ease, opacity 0.2s ease;
+      transition: color 0.2s ease, opacity 0.2s ease;
     }
-    .gear:hover { color: var(--color-midnight-ink); opacity: 1; transform: rotate(40deg); }
+    .gear:hover { color: var(--color-midnight-ink); opacity: 1; }
     .gear svg { width: 18px; height: 18px; }
 
     .popover {
@@ -1202,6 +1223,23 @@
 
     /* ──────── Misc ──────── */
     .empty-state .card-actions { opacity: 0.3; pointer-events: none; }
+
+    /* ──────── Motion-owned overrides ──────── */
+    /* When the Motion library is loaded, it drives these animations with
+       spring physics. We disable the CSS keyframes that it now owns so
+       they don't fight. Ambient stuff (breathe, drift, livepulse, timerpulse)
+       still runs from CSS — Motion only takes over discrete events. */
+    body.motion-on .card.entering { animation: none; }
+    body.motion-on .complete-overlay.show .complete-mark { animation: none; }
+    body.motion-on .complete-overlay.show .mote { animation: none; }
+    body.motion-on .greeting { transition: none; }
+    body.motion-on .affirm { transition: none; }
+    body.motion-on .popover { transition: none; }
+    body.motion-on .aside-panel { transition: none; }
+    body.motion-on .drawer { transition: none; }
+    body.motion-on .manifesto { transition: none; }
+    /* Reset transient inline styles that Motion sets between states */
+    .mote.motion-rendered { will-change: transform, opacity; }
 
     @media (prefers-reduced-motion: reduce) {
       .card, .backdrop::before, .backdrop::after { animation: none; }

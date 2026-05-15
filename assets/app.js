@@ -117,6 +117,77 @@
   const importFile = el('import-file');
   const affirmEl = el('affirm');
 
+  /** ---------- Motion (motion.dev) ----------
+   * A thin layer on top of the Motion library. Falls back to no-op when
+   * Motion isn't loaded or the user prefers reduced motion. Used for the
+   * discrete, event-triggered animations (taps, opens, list staggers,
+   * count-ups, completion fanfare). The ambient CSS animations (drift,
+   * breathe, livepulse, timerpulse) keep running on their own.
+   */
+  const M = (typeof window !== 'undefined' && window.Motion) || null;
+  const reduceMotion = typeof matchMedia === 'function' &&
+    matchMedia('(prefers-reduced-motion: reduce)').matches;
+  const motionOn = !!(M && M.animate) && !reduceMotion;
+  if (motionOn) document.body.classList.add('motion-on');
+
+  const noopAnim = { stop() {}, cancel() {}, finished: Promise.resolve(),
+                     then(cb) { return Promise.resolve().then(cb); } };
+  function mAnimate(target, keyframes, options) {
+    if (!motionOn || !target) return noopAnim;
+    try { return M.animate(target, keyframes, options); }
+    catch (e) { return noopAnim; }
+  }
+  function mStagger(delay, opts) {
+    if (motionOn && M.stagger) return M.stagger(delay, opts);
+    return (i) => i * (delay || 0.06);
+  }
+  const springy = { type: 'spring', stiffness: 320, damping: 22 };
+  const softSpring = { type: 'spring', stiffness: 200, damping: 26 };
+  const snappy = { type: 'spring', stiffness: 420, damping: 18 };
+  const ease = [0.2, 0.8, 0.2, 1];
+
+  // Hover/press helpers — graceful no-op if Motion not loaded.
+  if (motionOn && M.hover) {
+    M.hover('.stack-item', (target) => {
+      mAnimate(target, { scale: 1.012 }, { duration: 0.2, ease });
+      return () => mAnimate(target, { scale: 1 }, { duration: 0.25, ease });
+    });
+    M.hover('.swatch', (target) => {
+      mAnimate(target, { scale: 1.18 }, softSpring);
+      return () => mAnimate(target, { scale: 1 }, softSpring);
+    });
+    M.hover('.gear', (target) => {
+      mAnimate(target, { rotate: 40 }, springy);
+      return () => mAnimate(target, { rotate: 0 }, softSpring);
+    });
+    M.hover('.counter', (target) => {
+      mAnimate(target, { scale: 1.04 }, springy);
+      return () => mAnimate(target, { scale: 1 }, softSpring);
+    });
+  }
+  if (motionOn && M.press) {
+    M.press('.swatch', (target) => {
+      mAnimate(target, { scale: [1.18, 0.85, 1.2, 1] },
+               { duration: 0.55, ease: 'easeOut' });
+    });
+    M.press('.gear', (target) => {
+      mAnimate(target, { rotate: [0, 90] }, snappy);
+    });
+  }
+
+  // Animate a number's text from a -> b (count-up).
+  function tickNumber(node, from, to, dur = 0.6) {
+    if (!motionOn || from === to) {
+      if (node) node.textContent = String(to);
+      return;
+    }
+    mAnimate(from, to, {
+      duration: dur,
+      ease,
+      onUpdate: (v) => { node.textContent = String(Math.round(v)); }
+    });
+  }
+
   /** ---------- Mood ---------- */
   function computeMood() {
     if (state.moodOverride && state.moodOverride !== 'auto') return state.moodOverride;
@@ -155,6 +226,7 @@
 
   function setHint(text) { hintEl.innerHTML = text; }
 
+  let prevDoneDisabled = true;
   function renderThing() {
     const v = state.current || '';
     if (!v && !editing) {
@@ -171,6 +243,13 @@
       // While editing, the in-card edit-bar already shows the shortcuts.
       setHint(editing ? '' : 'Click text to edit · <kbd>⌘⏎</kbd> mark done');
     }
+    // When the button transitions from disabled → enabled, give it a
+    // small reassuring nudge so it reads as alive.
+    if (motionOn && prevDoneDisabled && !doneBtn.disabled) {
+      mAnimate(doneBtn, { scale: [1, 1.06, 1] },
+        { duration: 0.45, ease: 'easeOut' });
+    }
+    prevDoneDisabled = doneBtn.disabled;
   }
 
   function startEdit() {
@@ -308,11 +387,13 @@
   }
 
   /** ---------- Streak / log render ---------- */
+  let prevStreakDays = 0;
   function renderStreak() {
     const todayCount = (state.log[todayISO()] || []).length;
     streakLabel.textContent = todayCount === 1 ? '1 done today' : `${todayCount} done today`;
     const days = computeStreak();
-    streakCountEl.textContent = days;
+    tickNumber(streakCountEl, prevStreakDays, days, 0.7);
+    prevStreakDays = days;
 
     // Ring around gear: progress = consecutive days in last 7
     const days7 = last7Days();
@@ -320,19 +401,36 @@
     const C = 2 * Math.PI * 24;
     const fg = gearRing.querySelector('circle.fg');
     fg.setAttribute('stroke-dasharray', String(C));
-    fg.setAttribute('stroke-dashoffset', String(C * (1 - filled / 7)));
+    const targetOffset = C * (1 - filled / 7);
+    if (motionOn) {
+      mAnimate(fg, { strokeDashoffset: targetOffset }, { duration: 0.9, ease });
+    } else {
+      fg.setAttribute('stroke-dashoffset', String(targetOffset));
+    }
     gearRing.classList.toggle('dim', filled === 0);
 
     streakDays.innerHTML = days7.map(d =>
-      `<span style="width:6px;height:6px;border-radius:50%;background:${d.count>0?'var(--color-engagement-gold)':'rgba(17,17,17,0.12)'};display:inline-block;"></span>`
+      `<span class="streak-dot" style="width:6px;height:6px;border-radius:50%;background:${d.count>0?'var(--color-engagement-gold)':'rgba(17,17,17,0.12)'};display:inline-block;"></span>`
     ).join('');
+    if (motionOn) {
+      mAnimate(streakDays.querySelectorAll('.streak-dot'),
+        { opacity: [0, 1], scale: [0.4, 1] },
+        { duration: 0.4, delay: mStagger(0.04), ease });
+    }
 
     logCount.textContent = todayCount === 0 ? '—' : `${todayCount} done`;
   }
 
   /** ---------- Counter ---------- */
+  let prevStackLen = 0;
   function renderCounter() {
-    countNum.textContent = state.stack.length;
+    const next = state.stack.length;
+    tickNumber(countNum, prevStackLen, next, 0.5);
+    if (motionOn && next !== prevStackLen) {
+      mAnimate(countNum, { scale: [1, 1.35, 1] }, { duration: 0.55, ease: 'easeOut' });
+    }
+    prevStackLen = next;
+
     const existing = counterZone.querySelector('.ministack');
     if (existing) existing.remove();
     if (state.counterStyle === 'mini' && state.stack.length > 0) {
@@ -348,6 +446,11 @@
         mini.appendChild(c);
       });
       counterZone.insertBefore(mini, counterBtn);
+      if (motionOn) {
+        mAnimate(mini.querySelectorAll('.ms-card'),
+          { opacity: [0, null], y: [10, 0] },
+          { duration: 0.45, delay: mStagger(0.05), ease });
+      }
     }
   }
   counterBtn.addEventListener('mouseenter', () => {
@@ -364,6 +467,11 @@
       c.style.transform = `scale(${0.92 + i * 0.04})`;
       mini.appendChild(c);
     });
+    if (motionOn) {
+      mAnimate(mini.querySelectorAll('.ms-card'),
+        { opacity: [0, null], y: [12, 0] },
+        { duration: 0.4, delay: mStagger(0.06), ease });
+    }
   });
   counterBtn.addEventListener('mouseleave', () => {
     if (state.counterStyle !== 'expand') return;
@@ -380,9 +488,27 @@
     setTab(tab || 'queue');
     drawer.classList.add('open');
     scrim.classList.add('open');
+    if (motionOn) {
+      mAnimate(drawer, { y: ['100%', '0%'] },
+               { type: 'spring', stiffness: 280, damping: 30 });
+      mAnimate(scrim, { opacity: [0, 1] }, { duration: 0.25, ease });
+      staggerActiveDrawerRows(0.12);
+    }
     setTimeout(() => activeTab === 'queue' && addInput.focus(), 200);
   }
-  function closeDrawer() { drawer.classList.remove('open'); scrim.classList.remove('open'); }
+  function closeDrawer() {
+    if (motionOn) {
+      mAnimate(scrim, { opacity: [1, 0] }, { duration: 0.2, ease });
+      mAnimate(drawer, { y: ['0%', '100%'] }, { duration: 0.32, ease })
+        .finished.then(() => {
+          drawer.classList.remove('open');
+          scrim.classList.remove('open');
+        }).catch(() => {});
+    } else {
+      drawer.classList.remove('open');
+      scrim.classList.remove('open');
+    }
+  }
   scrim.addEventListener('click', closeDrawer);
   document.addEventListener('keydown', (e) => {
     if (e.key === 'Escape') {
@@ -420,8 +546,22 @@
     }
   }
   document.querySelectorAll('.drawer-tab').forEach(t => {
-    t.addEventListener('click', () => setTab(t.dataset.tab));
+    t.addEventListener('click', () => {
+      setTab(t.dataset.tab);
+      if (motionOn) staggerActiveDrawerRows(0.04);
+    });
   });
+
+  function staggerActiveDrawerRows(start = 0) {
+    if (!motionOn) return;
+    const pane = activeTab === 'queue' ? drawerList :
+                 activeTab === 'log' ? logList : releasedList;
+    const rows = pane.querySelectorAll(
+      '.stack-item, .log-item, .released-item, .log-day');
+    if (!rows.length) return;
+    mAnimate(rows, { opacity: [0, 1], y: [10, 0] },
+      { duration: 0.4, delay: mStagger(0.04, { start }), ease });
+  }
 
   function renderDrawer() {
     drawerList.innerHTML = '';
@@ -447,9 +587,18 @@
       row.querySelector('.x').addEventListener('click', (e) => {
         e.stopPropagation();
         const removed = state.stack[stackIdx];
-        state.stack.splice(stackIdx, 1);
-        if (removed) logReleased(removed);
-        save(); renderDrawer(); renderCounter();
+        const finishRemove = () => {
+          state.stack.splice(stackIdx, 1);
+          if (removed) logReleased(removed);
+          save(); renderDrawer(); renderCounter();
+        };
+        if (motionOn) {
+          mAnimate(row, { x: [0, 24], opacity: [1, 0] },
+            { duration: 0.25, ease: 'easeIn' })
+            .finished.then(finishRemove).catch(finishRemove);
+        } else {
+          finishRemove();
+        }
       });
       row.addEventListener('dragstart', (e) => {
         row.classList.add('dragging');
@@ -555,13 +704,31 @@
   function addToStack(text) {
     const t = text.trim();
     if (!t) return;
+    let promotedToCurrent = false;
     if (!state.current) {
       state.current = t;
       state.timerStart = Date.now();
+      promotedToCurrent = true;
     } else {
       state.stack.push(t);
     }
     save(); renderThing(); renderCounter(); renderDrawer(); renderAside();
+    if (motionOn) {
+      if (promotedToCurrent) {
+        // The text just landed in the card — pop the thing.
+        mAnimate(thingEl,
+          { opacity: [0, 1], y: [10, 0], filter: ['blur(4px)', 'blur(0px)'] },
+          { duration: 0.5, ease });
+      } else {
+        // Highlight the newly added row at the top of the (reversed) list.
+        const first = drawerList.querySelector('.stack-item');
+        if (first) {
+          mAnimate(first,
+            { opacity: [0, 1], y: [-12, 0], scale: [0.96, 1] },
+            { type: 'spring', stiffness: 360, damping: 24 });
+        }
+      }
+    }
   }
   addBtn.addEventListener('click', () => { addToStack(addInput.value); addInput.value=''; addInput.focus(); });
   addInput.addEventListener('keydown', (e) => {
@@ -577,8 +744,22 @@
     affirmEl.textContent = word;
     if (affirmTimer) clearTimeout(affirmTimer);
     affirmEl.classList.add('show');
+    if (motionOn) {
+      // Soft spring up + slight blur clear, then sigh back down.
+      mAnimate(affirmEl,
+        { opacity: [0, 1], y: [10, 0], filter: ['blur(3px)', 'blur(0px)'] },
+        { type: 'spring', stiffness: 240, damping: 26 });
+    }
     affirmTimer = setTimeout(() => {
-      affirmEl.classList.remove('show');
+      if (motionOn) {
+        mAnimate(affirmEl,
+          { opacity: [1, 0], y: [0, -6], filter: ['blur(0px)', 'blur(2px)'] },
+          { duration: 0.5, ease })
+          .finished.then(() => affirmEl.classList.remove('show'))
+          .catch(() => affirmEl.classList.remove('show'));
+      } else {
+        affirmEl.classList.remove('show');
+      }
     }, 1100);
   }
 
@@ -611,21 +792,36 @@
     playChime();
 
     // Pull next from stack (or empty) WITHOUT animating the card itself —
-    // we crossfade the text to avoid jank.
+    // we crossfade the text to avoid jank. Motion adds a slight blur dust
+    // to the swap so it feels less like a flicker.
     setTimeout(() => {
       const next = state.stack.length ? state.stack.pop() : '';
-      // Crossfade text
-      thingEl.style.transition = 'opacity 0.3s ease';
-      thingEl.style.opacity = '0';
-      setTimeout(() => {
+      const swap = () => {
         state.current = next;
         state.timerStart = next ? Date.now() : null;
         save();
         renderThing();
         renderAside();
-        thingEl.style.opacity = '1';
-        setTimeout(() => { thingEl.style.transition = ''; }, 350);
-      }, 300);
+      };
+      if (motionOn) {
+        mAnimate(thingEl,
+          { opacity: [1, 0], filter: ['blur(0px)', 'blur(4px)'], y: [0, -4] },
+          { duration: 0.28, ease })
+          .finished.then(() => {
+            swap();
+            mAnimate(thingEl,
+              { opacity: [0, 1], filter: ['blur(4px)', 'blur(0px)'], y: [4, 0] },
+              { duration: 0.35, ease });
+          }).catch(swap);
+      } else {
+        thingEl.style.transition = 'opacity 0.3s ease';
+        thingEl.style.opacity = '0';
+        setTimeout(() => {
+          swap();
+          thingEl.style.opacity = '1';
+          setTimeout(() => { thingEl.style.transition = ''; }, 350);
+        }, 300);
+      }
       renderCounter();
       renderStreak();
     }, 600);
@@ -649,20 +845,62 @@
     const colors = ['#fbc768', '#47d096', '#e2ddfd', '#ffd7f0', '#c6ece9'];
     const cx = window.innerWidth / 2;
     const cy = window.innerHeight / 2;
-    for (let i = 0; i < 14; i++) {
+    const count = motionOn ? 22 : 14;
+    const moteEls = [];
+    for (let i = 0; i < count; i++) {
       const m = document.createElement('div');
-      m.className = 'mote';
-      const angle = (Math.PI * 2 * i) / 14 + (Math.random() - 0.5) * 0.5;
-      const dist = 90 + Math.random() * 100;
-      m.style.setProperty('--dx', `${Math.cos(angle) * dist}px`);
-      m.style.setProperty('--dy', `${Math.sin(angle) * dist - 40}px`);
+      m.className = 'mote motion-rendered';
+      const angle = (Math.PI * 2 * i) / count + (Math.random() - 0.5) * 0.5;
+      const dist = 90 + Math.random() * 110;
+      m.dataset.dx = String(Math.cos(angle) * dist);
+      m.dataset.dy = String(Math.sin(angle) * dist - 40);
+      m.style.setProperty('--dx', `${m.dataset.dx}px`);
+      m.style.setProperty('--dy', `${m.dataset.dy}px`);
       m.style.left = `${cx}px`;
       m.style.top = `${cy}px`;
       m.style.background = colors[i % colors.length];
       m.style.animationDelay = `${Math.random() * 100}ms`;
       motes.appendChild(m);
+      moteEls.push(m);
     }
     completeOverlay.classList.add('show');
+
+    if (motionOn) {
+      // Each mote arcs outward with a slight gravity-like settle.
+      moteEls.forEach((m, i) => {
+        const dx = parseFloat(m.dataset.dx);
+        const dy = parseFloat(m.dataset.dy);
+        mAnimate(m,
+          {
+            opacity: [0, 0.95, 0],
+            x: [0, dx * 0.6, dx],
+            y: [0, dy * 0.5, dy + 28],
+            scale: [0.4, 1, 1.15]
+          },
+          {
+            duration: 1.5 + Math.random() * 0.3,
+            delay: Math.random() * 0.18,
+            ease: [0.18, 0.6, 0.3, 1],
+            times: [0, 0.4, 1]
+          });
+      });
+
+      // The check mark itself: spring in, hang, soft fade.
+      const mark = completeOverlay.querySelector('.complete-mark');
+      mAnimate(mark, { scale: [0.4, 1.08, 1], opacity: [0, 1, 1] },
+        { duration: 0.6, ease: 'easeOut', times: [0, 0.7, 1] });
+      mAnimate(mark, { scale: 0.9, opacity: 0 },
+        { duration: 0.5, delay: 1.1, ease });
+
+      // Draw the check polyline.
+      const poly = mark.querySelector('polyline');
+      const len = (poly.getTotalLength && poly.getTotalLength()) || 28;
+      poly.style.strokeDasharray = String(len);
+      poly.style.strokeDashoffset = String(len);
+      mAnimate(poly, { strokeDashoffset: [len, 0] },
+        { duration: 0.45, delay: 0.18, ease: 'easeOut' });
+    }
+
     setTimeout(() => completeOverlay.classList.remove('show'), 1700);
   }
 
@@ -688,8 +926,28 @@
   }
 
   /** ---------- Popover ---------- */
-  function openPopover() { popoverEl.classList.add('open'); }
-  function closePopover() { popoverEl.classList.remove('open'); }
+  function openPopover() {
+    popoverEl.classList.add('open');
+    if (motionOn) {
+      mAnimate(popoverEl,
+        { opacity: [0, 1], scale: [0.92, 1], y: [8, 0] },
+        { type: 'spring', stiffness: 360, damping: 26 });
+      const rows = popoverEl.querySelectorAll('.pop-title, .pop-row, .pop-divider');
+      mAnimate(rows, { opacity: [0, 1], y: [6, 0] },
+        { duration: 0.4, delay: mStagger(0.025, { start: 0.05 }), ease });
+    }
+  }
+  function closePopover() {
+    if (motionOn) {
+      mAnimate(popoverEl,
+        { opacity: [1, 0], scale: [1, 0.96], y: [0, 6] },
+        { duration: 0.18, ease })
+        .finished.then(() => popoverEl.classList.remove('open'))
+        .catch(() => popoverEl.classList.remove('open'));
+    } else {
+      popoverEl.classList.remove('open');
+    }
+  }
   gearBtn.addEventListener('click', (e) => {
     e.stopPropagation();
     popoverEl.classList.contains('open') ? closePopover() : openPopover();
@@ -751,8 +1009,29 @@
     importFile.value = '';
   });
 
-  function openManifesto() { manifestoEl.classList.add('open'); }
-  function closeManifesto() { manifestoEl.classList.remove('open'); }
+  function openManifesto() {
+    manifestoEl.classList.add('open');
+    if (motionOn) {
+      mAnimate(manifestoEl, { opacity: [0, 1] }, { duration: 0.3, ease });
+      const inner = manifestoEl.querySelector('.manifesto-inner');
+      mAnimate(inner,
+        { opacity: [0, 1], scale: [0.96, 1], y: [12, 0] },
+        { type: 'spring', stiffness: 280, damping: 28 });
+      const parts = manifestoEl.querySelectorAll(
+        '.manifesto h1, .manifesto p, .manifesto .signoff');
+      mAnimate(parts, { opacity: [0, 1], y: [10, 0] },
+        { duration: 0.5, delay: mStagger(0.07, { start: 0.18 }), ease });
+    }
+  }
+  function closeManifesto() {
+    if (motionOn) {
+      mAnimate(manifestoEl, { opacity: [1, 0] }, { duration: 0.22, ease })
+        .finished.then(() => manifestoEl.classList.remove('open'))
+        .catch(() => manifestoEl.classList.remove('open'));
+    } else {
+      manifestoEl.classList.remove('open');
+    }
+  }
   manifestoClose.addEventListener('click', closeManifesto);
   manifestoEl.addEventListener('click', (e) => { if (e.target === manifestoEl) closeManifesto(); });
 
@@ -768,15 +1047,32 @@
   ];
   let asideSaveTimer = null;
 
+  let prevHasNote = false;
   function renderAside() {
     // Tab visibility: only when there's a current task
     const hasCurrent = !!(state.current && state.current.trim());
+    const wasHidden = asideTab.hidden;
     asideTab.hidden = !hasCurrent;
-    asideTab.classList.toggle('has-note', !!(state.currentNote && state.currentNote.trim()));
+    const hasNote = !!(state.currentNote && state.currentNote.trim());
+    asideTab.classList.toggle('has-note', hasNote);
     // Reflect saved value into textarea when not actively editing
     if (document.activeElement !== asideText) {
       asideText.value = state.currentNote || '';
     }
+    if (motionOn) {
+      // Tab becomes visible — slide in from the card's right edge.
+      if (wasHidden && hasCurrent) {
+        mAnimate(asideTab, { opacity: [0, 1], x: [-8, 0] },
+          { type: 'spring', stiffness: 320, damping: 26 });
+      }
+      // Note dot just turned on — small celebratory bump.
+      if (!prevHasNote && hasNote) {
+        const dot = asideTab.querySelector('.aside-tab-dot');
+        if (dot) mAnimate(dot, { scale: [0.5, 1.6, 1] },
+          { duration: 0.55, ease: 'easeOut' });
+      }
+    }
+    prevHasNote = hasNote;
   }
 
   function openAside() {
@@ -787,15 +1083,32 @@
     asidePanel.classList.add('open');
     asideScrim.classList.add('open');
     asidePanel.setAttribute('aria-hidden', 'false');
+    if (motionOn) {
+      mAnimate(asideScrim, { opacity: [0, 1] }, { duration: 0.25, ease });
+      mAnimate(asidePanel,
+        { opacity: [0, 1], x: [24, 0] },
+        { type: 'spring', stiffness: 320, damping: 28 });
+    }
     setTimeout(() => asideText.focus(), 80);
   }
 
   function closeAside() {
     flushAsideSave();
-    asidePanel.classList.remove('open');
-    asideScrim.classList.remove('open');
     asidePanel.setAttribute('aria-hidden', 'true');
-    renderAside();
+    if (motionOn) {
+      mAnimate(asideScrim, { opacity: [1, 0] }, { duration: 0.22, ease })
+        .finished.then(() => asideScrim.classList.remove('open'))
+        .catch(() => asideScrim.classList.remove('open'));
+      mAnimate(asidePanel,
+        { opacity: [1, 0], x: [0, 18] },
+        { duration: 0.26, ease })
+        .finished.then(() => { asidePanel.classList.remove('open'); renderAside(); })
+        .catch(() => { asidePanel.classList.remove('open'); renderAside(); });
+    } else {
+      asidePanel.classList.remove('open');
+      asideScrim.classList.remove('open');
+      renderAside();
+    }
   }
 
   function flushAsideSave() {
@@ -843,14 +1156,45 @@
     // Hide card, show greeting
     cardWrap.classList.add('hidden');
     const word = yest.length === 1 ? 'one thing' : `${yest.length} things`;
-    greetingEl.innerHTML = `Yesterday you did ${word}.<span class="sub">Today's a fresh page.</span>`;
-    setTimeout(() => greetingEl.classList.add('show'), 200);
-    setTimeout(() => greetingEl.classList.remove('show'), 3200);
+    const phrase = `Yesterday you did ${word}.`;
+    if (motionOn) {
+      // Split into words so each lifts in with stagger.
+      const wordSpans = phrase.split(' ').map(w =>
+        `<span class="g-word" style="display:inline-block;white-space:pre;">${w} </span>`
+      ).join('');
+      greetingEl.innerHTML = `${wordSpans}<span class="sub">Today's a fresh page.</span>`;
+      greetingEl.classList.add('show');
+      greetingEl.style.opacity = '1';
+      mAnimate(greetingEl.querySelectorAll('.g-word'),
+        { opacity: [0, 1], y: [14, 0], filter: ['blur(6px)', 'blur(0px)'] },
+        { duration: 0.7, delay: mStagger(0.07, { start: 0.15 }), ease });
+      mAnimate(greetingEl.querySelector('.sub'),
+        { opacity: [0, 1], y: [8, 0] },
+        { duration: 0.6, delay: 0.9, ease });
+    } else {
+      greetingEl.innerHTML = `Yesterday you did ${word}.<span class="sub">Today's a fresh page.</span>`;
+      setTimeout(() => greetingEl.classList.add('show'), 200);
+    }
+    setTimeout(() => {
+      if (motionOn) {
+        mAnimate(greetingEl,
+          { opacity: [1, 0], y: [0, -8], filter: ['blur(0px)', 'blur(4px)'] },
+          { duration: 0.6, ease });
+      } else {
+        greetingEl.classList.remove('show');
+      }
+    }, 3200);
     setTimeout(() => {
       greetingEl.style.display = 'none';
       cardWrap.classList.remove('hidden');
-      cardEl.classList.add('entering');
-      setTimeout(() => cardEl.classList.remove('entering'), 800);
+      if (motionOn) {
+        mAnimate(cardEl,
+          { opacity: [0, 1], scale: [0.96, 1], y: [16, 0] },
+          { type: 'spring', stiffness: 240, damping: 26 });
+      } else {
+        cardEl.classList.add('entering');
+        setTimeout(() => cardEl.classList.remove('entering'), 800);
+      }
     }, 3700);
   }
 
@@ -871,6 +1215,19 @@
     obProgress.querySelectorAll('span').forEach((d, i) => {
       d.classList.toggle('active', i < n);
     });
+    if (motionOn) {
+      const activeStep = document.querySelector('.onboard-step.active');
+      if (activeStep) {
+        const items = activeStep.querySelectorAll('.ob-sub, h2, .ob-input, .ob-cta');
+        mAnimate(items,
+          { opacity: [0, 1], y: [18, 0], filter: ['blur(6px)', 'blur(0px)'] },
+          { duration: 0.7, delay: mStagger(0.09, { start: 0.1 }), ease });
+      }
+      // Pulse the newly-active progress dot.
+      const newDot = obProgress.querySelectorAll('span')[n - 1];
+      if (newDot) mAnimate(newDot, { scale: [1, 1.6, 1] },
+        { duration: 0.5, ease: 'easeOut' });
+    }
   }
   function startOnboarding() {
     onboardEl.hidden = false;
@@ -888,8 +1245,17 @@
       onboardEl.hidden = true;
       onboardEl.classList.remove('fade');
       renderThing();
-      cardEl.classList.add('entering');
-      setTimeout(() => cardEl.classList.remove('entering'), 800);
+      if (motionOn) {
+        mAnimate(cardEl,
+          { opacity: [0, 1], scale: [0.94, 1], y: [24, 0] },
+          { type: 'spring', stiffness: 220, damping: 24 });
+        mAnimate(cardWrap.querySelector('.label'),
+          { opacity: [0, 1], y: [-6, 0] },
+          { duration: 0.6, delay: 0.15, ease });
+      } else {
+        cardEl.classList.add('entering');
+        setTimeout(() => cardEl.classList.remove('entering'), 800);
+      }
     }, 700);
   }
   document.querySelectorAll('[data-next]').forEach(b => {
@@ -931,6 +1297,25 @@
     renderAll();
   } else {
     renderAll();
+    // If the greeting will play, it handles its own entrance.
+    // Otherwise spring the card + status pill + counter in on first paint.
+    const greetingWillPlay = (() => {
+      const t = todayISO();
+      const yest = state.log[shiftISO(t, -1)] || [];
+      return yest.length && state.lastSeen !== t;
+    })();
+    if (motionOn && !greetingWillPlay) {
+      mAnimate(cardEl,
+        { opacity: [0, 1], scale: [0.96, 1], y: [16, 0] },
+        { type: 'spring', stiffness: 240, damping: 26 });
+      mAnimate(cardWrap.querySelector('.label'),
+        { opacity: [0, 1], y: [-6, 0] },
+        { duration: 0.6, delay: 0.15, ease });
+      mAnimate('.status .pill', { opacity: [0, 1], y: [-8, 0] },
+        { duration: 0.5, delay: 0.25, ease });
+      mAnimate('.counter, .gear-wrap', { opacity: [0, null], y: [12, 0] },
+        { duration: 0.5, delay: mStagger(0.08, { start: 0.35 }), ease });
+    }
     maybeShowGreeting();
   }
   setInterval(applyMood, 60000);
