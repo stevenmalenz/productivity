@@ -186,7 +186,6 @@
     <div class="drawer-tabs">
       <button class="drawer-tab active" data-tab="queue">In the wings</button>
       <button class="drawer-tab" data-tab="log">Today's log</button>
-      <button class="drawer-tab" data-tab="released">Off the plate</button>
     </div>
     <div id="queue-pane">
       <div class="drawer-add">
@@ -196,14 +195,18 @@
       <div class="drawer-list" id="drawer-list" data-empty="Nothing waiting. Add something to do next."></div>
     </div>
     <div class="drawer-list" id="log-list" data-empty="Nothing done yet today. The first one's the hardest." style="display:none;"></div>
-    <div class="drawer-list" id="released-list" data-empty="Your space is clear. Tend to the plate when you're ready." style="display:none;"></div>
   </div>
 
-  <!-- Affirmation toast (off-the-plate moments) -->
-  <div class="affirm" id="affirm" aria-live="polite"></div>
+  <!-- Released celebration (off-the-plate moments) -->
+  <div class="released-toast" id="released-toast" aria-live="polite">
+    <span class="released-word"></span>
+    <span class="released-emoji" aria-hidden="true">😮‍💨</span>
+  </div>
+  <div class="released-motes" id="released-motes" aria-hidden="true"></div>
 
   <!-- Completion overlay (calm, no card flash) -->
   <div class="complete-overlay" id="complete-overlay">
+    <div class="complete-halo" id="complete-halo" aria-hidden="true"></div>
     <div class="motes" id="motes"></div>
     <div class="complete-mark">
       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round">
