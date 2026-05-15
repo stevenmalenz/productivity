@@ -683,7 +683,7 @@
    * drift gently upward then dissipate. Motion drives the whole thing
    * via a sequence so the timing reads as one gesture.
    */
-  const releasedWords = ['Released', 'Let go', 'Space made', 'Not yours', 'Off the plate'];
+  const releasedWords = ['Released'];
   let releasedTimer = null;
 
   function logReleased(text) {
@@ -736,7 +736,7 @@
     const cx = r.left + r.width / 2;
     const cy = r.top + r.height / 2;
     const colors = ['#e2ddfd', '#ffd7f0', '#c6ece9', '#fbc768'];
-    const count = 9;
+    const count = 6;
     for (let i = 0; i < count; i++) {
       const m = document.createElement('div');
       m.className = 'release-mote';
@@ -744,14 +744,16 @@
       m.style.top = `${cy}px`;
       m.style.background = colors[i % colors.length];
       releasedMotes.appendChild(m);
-      const angle = -Math.PI / 2 + (i / count - 0.5) * 1.4; // mostly upward
-      const dist = 60 + Math.random() * 60;
+      // Spread sideways and upward in a contained arc, scaled to the
+      // smaller pill — no need for big travel distances.
+      const angle = -Math.PI / 2 + (i / count - 0.5) * 1.6;
+      const dist = 32 + Math.random() * 28;
       const dx = Math.cos(angle) * dist;
       const dy = Math.sin(angle) * dist;
       mAnimate(m,
-        { opacity: [0, 0.85, 0], x: [0, dx], y: [0, dy], scale: [0.4, 1, 1.3] },
-        { duration: 1.4 + Math.random() * 0.4,
-          delay: Math.random() * 0.15,
+        { opacity: [0, 0.85, 0], x: [0, dx], y: [0, dy], scale: [0.4, 1, 1.25] },
+        { duration: 1.1 + Math.random() * 0.3,
+          delay: Math.random() * 0.12,
           ease: [0.2, 0.6, 0.4, 1],
           times: [0, 0.4, 1] });
     }
@@ -814,11 +816,7 @@
     e.stopPropagation();
     if (editing) { commitEdit(); return; }
     if (!state.current) return;
-    // Drop any magnetic offset before the launch sequence kicks in.
-    if (motionOn) {
-      mAnimate(doneBtn, { x: 0 }, { duration: 0.12, ease });
-      launchDoneButton();
-    }
+    if (motionOn) launchDoneButton();
     complete();
   });
 
@@ -857,31 +855,18 @@
     const svg = doneBtn.querySelector('svg');
     const poly = svg && svg.querySelector('polyline');
 
-    // Magnetic hover — the button gently follows the cursor (15% of the
-    // offset from center), and lifts -2px while hovered. Disabled state
-    // is excluded so the empty-state button doesn't tease.
-    doneBtn.addEventListener('mousemove', (e) => {
-      if (doneBtn.disabled) return;
-      const r = doneBtn.getBoundingClientRect();
-      const cxr = r.left + r.width / 2;
-      const cyr = r.top + r.height / 2;
-      const dx = (e.clientX - cxr) * 0.16;
-      const dy = (e.clientY - cyr) * 0.16 - 2;
-      mAnimate(doneBtn, { x: dx, y: dy }, { duration: 0.22, ease });
-    });
+    // Hover: -2px lift + the check polyline draws itself (anticipation).
+    // Motion's pathLength handles SVG draw natively (0 to 1).
     doneBtn.addEventListener('mouseenter', () => {
       if (doneBtn.disabled) return;
       mAnimate(doneBtn, { y: -2 }, softSpring);
-      // The check polyline draws itself on hover — anticipation.
-      // Motion's pathLength handles SVG draw natively (0 to 1).
       if (poly) {
         mAnimate(poly, { pathLength: [0, 1] },
           { duration: 0.55, ease: 'easeOut' });
       }
     });
     doneBtn.addEventListener('mouseleave', () => {
-      mAnimate(doneBtn, { x: 0, y: 0 }, softSpring);
-      // Clear inline draw state so the path is fully visible at rest.
+      mAnimate(doneBtn, { y: 0 }, softSpring);
       if (poly) {
         poly.style.strokeDasharray = '';
         poly.style.strokeDashoffset = '';
