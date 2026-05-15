@@ -483,6 +483,7 @@
     .card-inner { display: flex; flex-direction: column; gap: 24px; }
 
     .thing {
+      position: relative;
       font-size: 44px;
       line-height: 1.12;
       letter-spacing: -1.2px;
@@ -495,20 +496,42 @@
       cursor: text;
       word-break: break-word;
     }
+    /* Placeholder lives as an absolutely-positioned pseudo so it overlays
+       the contenteditable without pushing the caret position around. The
+       opacity is driven by a CSS variable so JS can fade it out before
+       toggling the .empty class — no more instant vanish on click. */
     .thing.empty::before {
       content: attr(data-placeholder);
+      position: absolute;
+      left: 0; top: 0;
       color: var(--color-muted-ash);
-      opacity: 0.5;
+      opacity: var(--placeholder-opacity, 0.5);
+      transition: opacity 0.22s ease;
       pointer-events: none;
     }
+    /* If user types within the fade window, hide placeholder regardless
+       of the .empty class — keeps the typed text clean. */
+    .thing:not(:empty)::before { display: none; }
 
+    /* Grid-stack meta + edit-bar in the same cell so they can crossfade
+       via opacity instead of snapping via display:none. The button sits
+       in column 2, unaffected by the swap. */
     .card-actions {
-      display: flex; align-items: center; justify-content: space-between;
+      display: grid;
+      grid-template-columns: 1fr auto;
+      align-items: center;
       gap: 12px; padding-top: 20px;
       border-top: 1px solid rgba(17,17,17,0.06);
+      transition: opacity 0.25s ease;
     }
+    .card-actions > .meta,
+    .card-actions > .edit-bar {
+      grid-row: 1; grid-column: 1;
+      transition: opacity 0.22s ease;
+    }
+    .card-actions > .btn-primary { grid-row: 1; grid-column: 2; justify-self: end; }
     .meta {
-      display: flex; gap: 10px; align-items: center;
+      display: inline-flex; gap: 10px; align-items: center;
       color: var(--color-muted-ash);
       font-size: 13px; letter-spacing: 0.25px;
       font-variant-numeric: tabular-nums;
@@ -536,6 +559,10 @@
     }
     .btn-primary {
       position: relative;
+      display: inline-grid;
+      grid-template-columns: auto auto;
+      align-items: center;
+      gap: 8px;
       background: var(--color-midnight-ink);
       color: var(--color-canvas-white);
       box-shadow:
@@ -544,7 +571,8 @@
       transition:
         transform 0.24s cubic-bezier(.2,.8,.2,1),
         box-shadow 0.28s cubic-bezier(.2,.8,.2,1),
-        background 0.2s ease;
+        background 0.2s ease,
+        opacity 0.25s ease;
     }
     .btn-primary:hover:not(:disabled) {
       transform: translateY(-2px);
@@ -576,16 +604,29 @@
     }
     .btn-ghost:hover { color: var(--color-midnight-ink); }
 
-    /* Editing toolbar appears in place of meta */
+    /* Editing toolbar — stacks behind meta in the same grid cell. CSS
+       transitions on opacity (set in .card-actions rules above) handle
+       the crossfade. */
     .edit-bar {
-      display: none; align-items: center; gap: 10px;
+      display: inline-flex; align-items: center; gap: 10px;
       color: var(--color-muted-ash); font-size: 12px; letter-spacing: 0.3px;
+      opacity: 0; pointer-events: none;
     }
-    .card.editing .edit-bar { display: inline-flex; }
-    .card.editing .meta { display: none; }
-    .card.editing .btn-done-label { display: none; }
-    .card.editing .btn-save-label { display: inline; }
-    .btn-save-label { display: none; }
+    .card.editing .edit-bar { opacity: 1; pointer-events: auto; }
+    .card.editing .meta { opacity: 0; pointer-events: none; }
+
+    /* Button labels stack in the same grid cell (defined on .btn-primary
+       above) so the wider label determines the button width — the swap
+       is a clean crossfade with no layout shift. The svg sits in col 2. */
+    .btn-done-label, .btn-save-label {
+      grid-row: 1; grid-column: 1;
+      white-space: nowrap;
+      transition: opacity 0.2s ease;
+    }
+    .btn-save-label { opacity: 0; pointer-events: none; }
+    .card.editing .btn-done-label { opacity: 0; }
+    .card.editing .btn-save-label { opacity: 1; }
+    .btn-primary > svg { grid-row: 1; grid-column: 2; }
 
     .hint {
       text-align: center; color: var(--color-muted-ash);
