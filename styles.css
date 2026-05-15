@@ -639,9 +639,10 @@
       cursor: pointer;
       color: var(--color-muted-ash);
       opacity: 0.55;
-      transition: color 0.2s ease, opacity 0.2s ease;
+      transition: transform 0.4s cubic-bezier(.2,.8,.2,1),
+                  color 0.2s ease, opacity 0.2s ease;
     }
-    .gear:hover { color: var(--color-midnight-ink); opacity: 1; }
+    .gear:hover { color: var(--color-midnight-ink); opacity: 1; transform: rotate(40deg); }
     .gear svg { width: 18px; height: 18px; }
 
     .popover {
@@ -1225,20 +1226,14 @@
     .empty-state .card-actions { opacity: 0.3; pointer-events: none; }
 
     /* ──────── Motion-owned overrides ──────── */
-    /* When the Motion library is loaded, it drives these animations with
-       spring physics. We disable the CSS keyframes that it now owns so
-       they don't fight. Ambient stuff (breathe, drift, livepulse, timerpulse)
-       still runs from CSS — Motion only takes over discrete events. */
-    body.motion-on .card.entering { animation: none; }
+    /* When the Motion library is loaded, it drives these specific
+       animations with spring physics, so the CSS keyframes step aside.
+       Everything else (drawer slide, aside panel slide, popover scale,
+       backdrop fade, card breathe, greeting fade, affirm rise, manifesto
+       fade) stays on CSS — animating transforms via Motion on those
+       elements fought with their positioning transforms. */
     body.motion-on .complete-overlay.show .complete-mark { animation: none; }
     body.motion-on .complete-overlay.show .mote { animation: none; }
-    body.motion-on .greeting { transition: none; }
-    body.motion-on .affirm { transition: none; }
-    body.motion-on .popover { transition: none; }
-    body.motion-on .aside-panel { transition: none; }
-    body.motion-on .drawer { transition: none; }
-    body.motion-on .manifesto { transition: none; }
-    /* Reset transient inline styles that Motion sets between states */
     .mote.motion-rendered { will-change: transform, opacity; }
 
     @media (prefers-reduced-motion: reduce) {
