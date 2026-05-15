@@ -570,6 +570,33 @@
       opacity: 0.35; cursor: not-allowed;
       transform: none; background: var(--color-midnight-ink);
       box-shadow: 0 1px 2px rgba(17,17,17,0.12);
+      animation: none;
+    }
+    /* Idle "ready" glow — the button gently emanates a green halo every
+       4s when enabled and at rest. Subtle delight that says "I'm here
+       when you are." Pauses on hover/active so it doesn't fight the
+       explicit hover state. */
+    @keyframes done-breathe {
+      0%, 100% {
+        box-shadow:
+          0 1px 2px rgba(17,17,17,0.18),
+          0 0 0 0 rgba(71,208,150,0);
+      }
+      50% {
+        box-shadow:
+          0 4px 14px -4px rgba(17,17,17,0.22),
+          0 0 0 6px rgba(71,208,150,0.10);
+      }
+    }
+    .btn-primary:not(:disabled) {
+      animation: done-breathe 4s ease-in-out infinite;
+    }
+    .btn-primary:hover:not(:disabled),
+    .btn-primary:active:not(:disabled) {
+      animation: none;
+    }
+    @media (prefers-reduced-motion: reduce) {
+      .btn-primary:not(:disabled) { animation: none; }
     }
     .btn-ghost {
       background: transparent; color: var(--color-muted-ash); padding: 11px 14px;
@@ -852,38 +879,48 @@
       padding-top: 2px;
     }
 
-    /* ──────── Off the plate ──────── */
-    .released-item {
-      display: flex; align-items: flex-start; gap: 12px;
-      padding: 12px 16px;
-      background: var(--color-whisper-gray);
-      border-radius: var(--radius-cards);
+    /* ──────── Released celebration ──────── */
+    /* When you X out a task, this is the closing gesture — parallel to
+       Mark done but quieter and more wistful. Lives bottom-center, fades
+       in for ~1.4s with a small puff of motes drifting upward. */
+    .released-toast {
+      position: fixed; bottom: 22vh; left: 50%;
+      transform: translateX(-50%);
+      display: inline-flex; align-items: baseline; gap: 12px;
       font-family: var(--font-serif);
       font-style: italic; font-weight: 300;
-      font-size: 14px;
-      color: var(--color-muted-ash);
-    }
-    .released-item .ltext { flex: 1; line-height: 1.4; text-wrap: pretty; }
-    .released-item .ltime {
-      flex-shrink: 0;
-      font-size: 11px;
-      letter-spacing: 0.3px; font-variant-numeric: tabular-nums;
-      padding-top: 2px;
-    }
-
-    /* Affirmation toast — softer than the completion overlay */
-    .affirm {
-      position: fixed; bottom: 96px; left: 50%;
-      transform: translate(-50%, 8px);
-      font-family: var(--font-serif);
-      font-style: italic; font-weight: 300;
-      font-size: 16px; letter-spacing: 0.1px;
-      color: var(--color-muted-ash);
+      font-size: 34px; letter-spacing: -0.6px;
+      color: var(--color-midnight-ink);
       opacity: 0; pointer-events: none;
       z-index: 38;
-      transition: opacity 0.4s ease, transform 0.5s cubic-bezier(.2,.8,.2,1);
+      transition: opacity 0.4s ease;
+      white-space: nowrap;
     }
-    .affirm.show { opacity: 1; transform: translate(-50%, 0); }
+    .released-toast.show { opacity: 1; }
+    .released-word { font-style: italic; }
+    .released-emoji {
+      font-style: normal;
+      font-size: 32px;
+      display: inline-block;
+      transform-origin: center;
+    }
+    .released-motes {
+      position: fixed; inset: 0;
+      pointer-events: none;
+      z-index: 37;
+    }
+    .release-mote {
+      position: absolute;
+      width: 6px; height: 6px;
+      border-radius: 50%;
+      opacity: 0;
+      filter: blur(0.5px);
+      will-change: transform, opacity;
+    }
+    @media (max-width: 600px) {
+      .released-toast { font-size: 26px; bottom: 24vh; }
+      .released-emoji { font-size: 24px; }
+    }
 
     /* ──────── Completion overlay ──────── */
     .complete-overlay {
@@ -893,6 +930,17 @@
       opacity: 0;
       background: radial-gradient(circle at center, rgba(255,255,255,0.6) 0%, rgba(255,255,255,0) 60%);
       transition: opacity 0.4s ease;
+    }
+    /* Halo — a soft green ring that expands outward from center, framing
+       the moment. Motion animates its scale + opacity. */
+    .complete-halo {
+      position: absolute; left: 50%; top: 50%;
+      width: 120px; height: 120px;
+      margin-left: -60px; margin-top: -60px;
+      border-radius: 50%;
+      border: 2px solid rgba(71,208,150,0.55);
+      opacity: 0;
+      pointer-events: none;
     }
     .complete-overlay.show { opacity: 1; }
     .complete-mark {
@@ -1229,12 +1277,25 @@
     /* When the Motion library is loaded, it drives these specific
        animations with spring physics, so the CSS keyframes step aside.
        Everything else (drawer slide, aside panel slide, popover scale,
-       backdrop fade, card breathe, greeting fade, affirm rise, manifesto
-       fade) stays on CSS — animating transforms via Motion on those
-       elements fought with their positioning transforms. */
+       backdrop fade, card breathe, greeting fade, manifesto fade) stays
+       on CSS — animating transforms via Motion on those elements fought
+       with their positioning transforms. */
     body.motion-on .complete-overlay.show .complete-mark { animation: none; }
     body.motion-on .complete-overlay.show .mote { animation: none; }
     .mote.motion-rendered { will-change: transform, opacity; }
+
+    /* Mark done button: Motion owns the button-level transform (hover
+       lift, magnetic mouse-follow, press squish, launch animation). CSS
+       still owns the hover background + shadow halo, and the svg's
+       in-button hover scale (separate element, no conflict). */
+    body.motion-on .btn-primary:hover:not(:disabled) { transform: none; }
+    body.motion-on .btn-primary:active:not(:disabled) { transform: none; }
+    /* Disable the svg's hover scale while Motion's launch animation
+       runs, since they fight over the svg's transform. The polyline
+       draw-on-hover (strokeDashoffset) coexists fine. */
+    body.motion-on .btn-primary:hover:not(:disabled) svg { transform: none; }
+    body.motion-on .btn-primary:active:not(:disabled) svg { transform: none; }
+    body.motion-on .btn-primary { will-change: transform, background-color; }
 
     @media (prefers-reduced-motion: reduce) {
       .card, .backdrop::before, .backdrop::after { animation: none; }

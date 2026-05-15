@@ -17,7 +17,7 @@
     log: {},          // { 'YYYY-MM-DD': [{text, ts, note?}] }
     lastSeen: null,   // YYYY-MM-DD of last app open
     currentNote: '',  // free-form journal for the current task
-    released: {},     // { 'YYYY-MM-DD': [{text, ts}] } — things you took off the plate
+    // released items are no longer persisted — the celebratory toast is the closure
   };
 
   let state = load();
@@ -99,7 +99,6 @@
   const drawer = el('drawer');
   const drawerList = el('drawer-list');
   const logList = el('log-list');
-  const releasedList = el('released-list');
   const drawerTitle = el('drawer-title');
   const drawerSub = el('drawer-sub');
   const queuePane = el('queue-pane');
@@ -115,7 +114,9 @@
   const exportRow = el('export-row');
   const importRow = el('import-row');
   const importFile = el('import-file');
-  const affirmEl = el('affirm');
+  const releasedToast = el('released-toast');
+  const releasedWord = releasedToast.querySelector('.released-word');
+  const releasedMotes = el('released-motes');
 
   /** ---------- Motion (motion.dev) ----------
    * A thin layer on top of the Motion library. Falls back to no-op when
@@ -264,6 +265,11 @@
       // New / changed thing — start timer fresh
       state.current = v;
       state.timerStart = Date.now();
+      // Small spring landing — the text "settles" into being The Thing.
+      if (motionOn) {
+        mAnimate(thingEl, { scale: [0.97, 1.02, 1] },
+          { duration: 0.5, ease: 'easeOut' });
+      }
     } else if (!v) {
       // Clearing the current task to empty is a deliberate "off the plate" act
       const prev = state.current;
@@ -497,24 +503,15 @@
     if (tab === 'queue') {
       queuePane.style.display = '';
       logList.style.display = 'none';
-      releasedList.style.display = 'none';
       drawerTitle.textContent = 'In the wings';
       drawerSub.textContent = 'Drag to reorder. Click to make it the one.';
       renderDrawer();
-    } else if (tab === 'log') {
+    } else {
       queuePane.style.display = 'none';
       logList.style.display = '';
-      releasedList.style.display = 'none';
       drawerTitle.textContent = "Today's log";
       drawerSub.textContent = 'Calm proof you showed up.';
       renderLog();
-    } else {
-      queuePane.style.display = 'none';
-      logList.style.display = 'none';
-      releasedList.style.display = '';
-      drawerTitle.textContent = 'Off the plate';
-      drawerSub.textContent = 'What you set down so the rest could breathe.';
-      renderReleased();
     }
   }
   document.querySelectorAll('.drawer-tab').forEach(t => {
@@ -526,13 +523,11 @@
 
   function staggerActiveDrawerRows(start = 0) {
     if (!motionOn) return;
-    const pane = activeTab === 'queue' ? drawerList :
-                 activeTab === 'log' ? logList : releasedList;
-    const rows = pane.querySelectorAll(
-      '.stack-item, .log-item, .released-item, .log-day');
+    const pane = activeTab === 'queue' ? drawerList : logList;
+    const rows = pane.querySelectorAll('.stack-item, .log-item, .log-day');
     if (!rows.length) return;
     mAnimate(rows, { opacity: [0, 1], y: [10, 0] },
-      { duration: 0.4, delay: mStagger(0.04, { start }), ease });
+      { duration: 0.4, delay: mStagger(0.04, { startDelay: start }), ease });
   }
 
   function renderDrawer() {
@@ -634,32 +629,6 @@
     });
   }
 
-  function renderReleased() {
-    releasedList.innerHTML = '';
-    const today = todayISO();
-    const days7 = last7Days().reverse();
-    days7.forEach(({ iso }) => {
-      const items = state.released[iso] || [];
-      if (!items.length) return;
-      const dayWrap = document.createElement('div');
-      dayWrap.className = 'log-day';
-      const head = document.createElement('div');
-      head.className = 'log-day-head';
-      head.textContent = iso === today ? 'Today'
-        : iso === shiftISO(today, -1) ? 'Yesterday'
-        : new Date(iso + 'T00:00:00').toLocaleDateString(undefined, { weekday:'long', month:'short', day:'numeric' });
-      dayWrap.appendChild(head);
-      items.forEach(it => {
-        const r = document.createElement('div');
-        r.className = 'released-item';
-        r.innerHTML = `<span class="ltext"></span><span class="ltime">${fmtTime(it.ts)}</span>`;
-        r.querySelector('.ltext').textContent = it.text;
-        dayWrap.appendChild(r);
-      });
-      releasedList.appendChild(dayWrap);
-    });
-  }
-
   function promote(stackIdx) {
     const item = state.stack[stackIdx];
     if (!item) return;
@@ -707,28 +676,85 @@
     if (e.key === 'Enter') { addToStack(addInput.value); addInput.value=''; }
   });
 
-  /** ---------- Off the plate ---------- */
-  const affirmWords = ['released', 'cleansed', 'let go', 'space made', "not yours to carry"];
-  let affirmTimer = null;
-
-  function flashAffirm() {
-    const word = affirmWords[Math.floor(Math.random() * affirmWords.length)];
-    affirmEl.textContent = word;
-    if (affirmTimer) clearTimeout(affirmTimer);
-    affirmEl.classList.add('show');
-    affirmTimer = setTimeout(() => {
-      affirmEl.classList.remove('show');
-    }, 1100);
-  }
+  /** ---------- Off the plate (Released celebration) ----------
+   * The X-out gets its own cinematic moment, parallel to Mark done. We
+   * don't persist released items anywhere — the toast IS the ack. A short
+   * serif word + the exhale emoji 😮‍💨, with a small puff of motes that
+   * drift gently upward then dissipate. Motion drives the whole thing
+   * via a sequence so the timing reads as one gesture.
+   */
+  const releasedWords = ['Released', 'Let go', 'Space made', 'Not yours', 'Off the plate'];
+  let releasedTimer = null;
 
   function logReleased(text) {
     const t = (text || '').trim();
     if (!t) return;
-    const today = todayISO();
-    if (!state.released[today]) state.released[today] = [];
-    state.released[today].push({ text: t, ts: Date.now() });
-    save();
-    flashAffirm();
+    // Intentionally NOT persisted to state — the toast is the closure.
+    flashReleased();
+  }
+
+  function flashReleased() {
+    const word = releasedWords[Math.floor(Math.random() * releasedWords.length)];
+    releasedWord.textContent = word;
+    if (releasedTimer) clearTimeout(releasedTimer);
+    releasedToast.classList.add('show');
+
+    if (motionOn && M.animate) {
+      const emoji = releasedToast.querySelector('.released-emoji');
+      const wordEl = releasedToast.querySelector('.released-word');
+      // The toast: gentle rise + soft scale-in. (Container has its own
+      // centering transform, so we animate only opacity + a subtle scale
+      // via Motion. CSS keeps the centering intact.)
+      mAnimate(releasedToast, { opacity: [0, 1] },
+        { duration: 0.4, ease });
+      // The word and emoji enter as a small choreographed pair.
+      mAnimate(wordEl, { opacity: [0, 1], y: [12, 0] },
+        { type: 'spring', stiffness: 280, damping: 26 });
+      mAnimate(emoji,
+        { opacity: [0, 1], scale: [0.5, 1.2, 1], rotate: [-10, 6, 0] },
+        { duration: 0.7, ease: 'backOut', delay: 0.1 });
+      // Puff of motes that exhale upward like a sigh.
+      puffReleasedMotes();
+    }
+    releasedTimer = setTimeout(() => {
+      if (motionOn) {
+        mAnimate(releasedToast,
+          { opacity: [1, 0] },
+          { duration: 0.5, ease })
+          .finished.then(() => releasedToast.classList.remove('show'))
+          .catch(() => releasedToast.classList.remove('show'));
+      } else {
+        releasedToast.classList.remove('show');
+      }
+    }, 1400);
+  }
+
+  function puffReleasedMotes() {
+    if (!motionOn) return;
+    releasedMotes.innerHTML = '';
+    const r = releasedToast.getBoundingClientRect();
+    const cx = r.left + r.width / 2;
+    const cy = r.top + r.height / 2;
+    const colors = ['#e2ddfd', '#ffd7f0', '#c6ece9', '#fbc768'];
+    const count = 9;
+    for (let i = 0; i < count; i++) {
+      const m = document.createElement('div');
+      m.className = 'release-mote';
+      m.style.left = `${cx}px`;
+      m.style.top = `${cy}px`;
+      m.style.background = colors[i % colors.length];
+      releasedMotes.appendChild(m);
+      const angle = -Math.PI / 2 + (i / count - 0.5) * 1.4; // mostly upward
+      const dist = 60 + Math.random() * 60;
+      const dx = Math.cos(angle) * dist;
+      const dy = Math.sin(angle) * dist;
+      mAnimate(m,
+        { opacity: [0, 0.85, 0], x: [0, dx], y: [0, dy], scale: [0.4, 1, 1.3] },
+        { duration: 1.4 + Math.random() * 0.4,
+          delay: Math.random() * 0.15,
+          ease: [0.2, 0.6, 0.4, 1],
+          times: [0, 0.4, 1] });
+    }
   }
 
   /** ---------- Done / Completion ---------- */
@@ -786,9 +812,100 @@
   }
   doneBtn.addEventListener('click', (e) => {
     e.stopPropagation();
-    if (editing) commitEdit();
-    else if (state.current) complete();
+    if (editing) { commitEdit(); return; }
+    if (!state.current) return;
+    // Drop any magnetic offset before the launch sequence kicks in.
+    if (motionOn) {
+      mAnimate(doneBtn, { x: 0 }, { duration: 0.12, ease });
+      launchDoneButton();
+    }
+    complete();
   });
+
+  /** ---------- Mark done button choreography ---------- */
+  function launchDoneButton() {
+    if (!motionOn) return;
+    const svg = doneBtn.querySelector('svg');
+    // Squish hard, then overshoot back to rest. Uses Motion spring with
+    // bounce for that satisfying tactile snap.
+    mAnimate(doneBtn,
+      { scale: [1, 0.86, 1.06, 1] },
+      { duration: 0.65, ease: 'easeOut', times: [0, 0.12, 0.55, 1] });
+    // Background flashes deliver-green then back to ink. The flash peaks
+    // right as the central completion mark appears at screen center, so
+    // the eye connects the two events as one gesture.
+    mAnimate(doneBtn,
+      { backgroundColor: ['#111111', '#47d096', '#111111'] },
+      { duration: 0.7, ease: 'easeOut', times: [0, 0.22, 1] });
+    // The check icon throws itself forward (upward + scale-up + fade),
+    // visually handing off to the central completion mark. Timed to come
+    // back in sync with the next task's text fade-in (~900ms after click).
+    if (svg) {
+      M.animate([
+        [svg,
+          { scale: [1, 1.7], y: [0, -22], opacity: [1, 0] },
+          { duration: 0.35, ease: 'easeOut' }],
+        [svg,
+          { scale: 1, y: 0, opacity: 1 },
+          { duration: 0.3, ease, at: 0.75 }]
+      ]);
+    }
+  }
+
+  function setupDoneButtonDelight() {
+    if (!motionOn) return;
+    const svg = doneBtn.querySelector('svg');
+    const poly = svg && svg.querySelector('polyline');
+
+    // Magnetic hover — the button gently follows the cursor (15% of the
+    // offset from center), and lifts -2px while hovered. Disabled state
+    // is excluded so the empty-state button doesn't tease.
+    doneBtn.addEventListener('mousemove', (e) => {
+      if (doneBtn.disabled) return;
+      const r = doneBtn.getBoundingClientRect();
+      const cxr = r.left + r.width / 2;
+      const cyr = r.top + r.height / 2;
+      const dx = (e.clientX - cxr) * 0.16;
+      const dy = (e.clientY - cyr) * 0.16 - 2;
+      mAnimate(doneBtn, { x: dx, y: dy }, { duration: 0.22, ease });
+    });
+    doneBtn.addEventListener('mouseenter', () => {
+      if (doneBtn.disabled) return;
+      mAnimate(doneBtn, { y: -2 }, softSpring);
+      // The check polyline draws itself on hover — anticipation.
+      // Motion's pathLength handles SVG draw natively (0 to 1).
+      if (poly) {
+        mAnimate(poly, { pathLength: [0, 1] },
+          { duration: 0.55, ease: 'easeOut' });
+      }
+    });
+    doneBtn.addEventListener('mouseleave', () => {
+      mAnimate(doneBtn, { x: 0, y: 0 }, softSpring);
+      // Clear inline draw state so the path is fully visible at rest.
+      if (poly) {
+        poly.style.strokeDasharray = '';
+        poly.style.strokeDashoffset = '';
+        poly.style.pathLength = '';
+      }
+    });
+
+    // Press squish (separate from the full launch sequence — fires on
+    // pointerdown even if the user releases off the button).
+    doneBtn.addEventListener('pointerdown', () => {
+      if (doneBtn.disabled) return;
+      mAnimate(doneBtn, { scale: 0.94 },
+        { duration: 0.1, ease: 'easeOut' });
+    });
+    doneBtn.addEventListener('pointerup', () => {
+      if (doneBtn.disabled) return;
+      mAnimate(doneBtn, { scale: [0.94, 1.06, 1] },
+        { type: 'spring', stiffness: 320, damping: 18 });
+    });
+    doneBtn.addEventListener('pointercancel', () => {
+      mAnimate(doneBtn, { scale: 1 }, softSpring);
+    });
+  }
+  setupDoneButtonDelight();
   document.addEventListener('keydown', (e) => {
     if ((e.metaKey || e.ctrlKey) && e.key === 'Enter') {
       if (document.activeElement !== thingEl && document.activeElement !== addInput) {
@@ -803,13 +920,13 @@
     const colors = ['#fbc768', '#47d096', '#e2ddfd', '#ffd7f0', '#c6ece9'];
     const cx = window.innerWidth / 2;
     const cy = window.innerHeight / 2;
-    const count = motionOn ? 22 : 14;
+    const count = motionOn ? 26 : 14;
     const moteEls = [];
     for (let i = 0; i < count; i++) {
       const m = document.createElement('div');
       m.className = 'mote motion-rendered';
       const angle = (Math.PI * 2 * i) / count + (Math.random() - 0.5) * 0.5;
-      const dist = 90 + Math.random() * 110;
+      const dist = 110 + Math.random() * 120;
       m.dataset.dx = String(Math.cos(angle) * dist);
       m.dataset.dy = String(Math.sin(angle) * dist - 40);
       m.style.setProperty('--dx', `${m.dataset.dx}px`);
@@ -824,42 +941,62 @@
     completeOverlay.classList.add('show');
 
     if (motionOn) {
-      // Each mote arcs outward with a slight gravity-like settle.
+      const mark = completeOverlay.querySelector('.complete-mark');
+      const halo = el('complete-halo');
+      const poly = mark.querySelector('polyline');
+
+      // Motes — each arcs outward from center with a slight gravity-like
+      // settle. Delay is computed per index so the spread reads as a
+      // ripple from the center rather than a uniform burst.
       moteEls.forEach((m, i) => {
         const dx = parseFloat(m.dataset.dx);
         const dy = parseFloat(m.dataset.dy);
+        // "from center" ordering: closer to middle index = earlier delay.
+        const mid = (count - 1) / 2;
+        const ripple = Math.abs(i - mid) / mid; // 0 at center, 1 at edge
         mAnimate(m,
           {
             opacity: [0, 0.95, 0],
-            x: [0, dx * 0.6, dx],
+            x: [0, dx * 0.55, dx],
             y: [0, dy * 0.5, dy + 28],
             scale: [0.4, 1, 1.15]
           },
           {
-            duration: 1.5 + Math.random() * 0.3,
-            delay: Math.random() * 0.18,
+            duration: 1.4 + Math.random() * 0.3,
+            delay: ripple * 0.18 + Math.random() * 0.06,
             ease: [0.18, 0.6, 0.3, 1],
             times: [0, 0.4, 1]
           });
       });
 
-      // The check mark itself: spring in, hang, soft fade.
-      const mark = completeOverlay.querySelector('.complete-mark');
-      mAnimate(mark, { scale: [0.4, 1.08, 1], opacity: [0, 1, 1] },
-        { duration: 0.6, ease: 'easeOut', times: [0, 0.7, 1] });
-      mAnimate(mark, { scale: 0.9, opacity: 0 },
-        { duration: 0.5, delay: 1.1, ease });
+      // Halo — a green ring expanding outward, framing the moment.
+      mAnimate(halo,
+        { scale: [0.3, 2.4], opacity: [0, 0.7, 0], borderWidth: ['3px', '1px'] },
+        { duration: 0.95, ease: 'easeOut', times: [0, 0.18, 1] });
 
-      // Draw the check polyline.
-      const poly = mark.querySelector('polyline');
-      const len = (poly.getTotalLength && poly.getTotalLength()) || 28;
-      poly.style.strokeDasharray = String(len);
-      poly.style.strokeDashoffset = String(len);
-      mAnimate(poly, { strokeDashoffset: [len, 0] },
-        { duration: 0.45, delay: 0.18, ease: 'easeOut' });
+      // Central mark: anticipate-eased spring in, settle, soft fade.
+      // Motion sequence keeps the three steps tightly choreographed.
+      M.animate([
+        [mark,
+          { scale: [0.3, 1.12, 1], opacity: [0, 1, 1] },
+          { duration: 0.6, ease: 'easeOut', times: [0, 0.65, 1] }],
+        [mark,
+          { scale: 0.94, opacity: 0 },
+          { duration: 0.45, ease, at: 1.1 }]
+      ]);
+
+      // The check polyline draws itself just after the mark lands.
+      // pathLength is Motion's native SVG draw API (0 to 1, normalized).
+      mAnimate(poly, { pathLength: [0, 1] },
+        { duration: 0.4, delay: 0.16, ease: 'easeOut' });
+
+      // The "X done today" pill jumps in joy.
+      mAnimate('.status .pill',
+        { scale: [1, 1.12, 1] },
+        { duration: 0.6, ease: 'easeOut', delay: 0.25 });
     }
 
-    setTimeout(() => completeOverlay.classList.remove('show'), 1700);
+    setTimeout(() => completeOverlay.classList.remove('show'), 1800);
   }
 
   /** ---------- Sound ---------- */
@@ -894,7 +1031,7 @@
     if (motionOn) {
       const rows = popoverEl.querySelectorAll('.pop-title, .pop-row, .pop-divider');
       mAnimate(rows, { opacity: [0, 1] },
-        { duration: 0.32, delay: mStagger(0.025, { start: 0.08 }), ease });
+        { duration: 0.32, delay: mStagger(0.025, { startDelay: 0.08 }), ease });
     }
   }
   function closePopover() {
@@ -969,7 +1106,7 @@
       const parts = manifestoEl.querySelectorAll(
         '.manifesto h1, .manifesto p, .manifesto .signoff');
       mAnimate(parts, { opacity: [0, 1], y: [10, 0] },
-        { duration: 0.5, delay: mStagger(0.06, { start: 0.18 }), ease });
+        { duration: 0.5, delay: mStagger(0.06, { startDelay: 0.18 }), ease });
     }
   }
   function closeManifesto() { manifestoEl.classList.remove('open'); }
@@ -1084,7 +1221,7 @@
       greetingEl.classList.add('show');
       mAnimate(greetingEl.querySelectorAll('.g-word'),
         { opacity: [0, 1], y: [10, 0] },
-        { duration: 0.6, delay: mStagger(0.07, { start: 0.15 }), ease });
+        { duration: 0.6, delay: mStagger(0.07, { startDelay: 0.15 }), ease });
       mAnimate(greetingEl.querySelector('.sub'),
         { opacity: [0, 1] },
         { duration: 0.6, delay: 0.9, ease });
@@ -1124,7 +1261,7 @@
         const items = activeStep.querySelectorAll('.ob-sub, h2, .ob-input, .ob-cta');
         mAnimate(items,
           { opacity: [0, 1], y: [18, 0], filter: ['blur(6px)', 'blur(0px)'] },
-          { duration: 0.7, delay: mStagger(0.09, { start: 0.1 }), ease });
+          { duration: 0.7, delay: mStagger(0.09, { startDelay: 0.1 }), ease });
       }
       // Pulse the newly-active progress dot.
       const newDot = obProgress.querySelectorAll('span')[n - 1];
