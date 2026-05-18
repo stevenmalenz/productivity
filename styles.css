@@ -475,7 +475,7 @@
       will-change: transform, opacity;
       animation: breathe 7s ease-in-out infinite;
     }
-    .card.editing { animation: none; transform: scale(1.005); }
+    .card.editing { animation: none; }
     .card.entering { animation: cardIn 0.7s cubic-bezier(.2,.8,.2,1) both; }
     @keyframes cardIn {
       0%   { opacity: 0; transform: translateY(20px) scale(0.97); }
