@@ -1,0 +1,21 @@
+{
+  "manifest_version": 3,
+  "name": "One thing — where your time went",
+  "version": "1.0.0",
+  "description": "A low-invasive companion for the One thing app. Records only the domain of your focused tab (never URLs, titles, or page contents), locally, so the app can mirror back where your time went. Auto-forgotten after 7 days. Nothing ever leaves your machine.",
+  "permissions": ["tabs", "idle", "storage"],
+  "background": {
+    "service_worker": "background.js"
+  },
+  "content_scripts": [
+    {
+      "matches": [
+        "https://stevenmalenz.github.io/productivity/*",
+        "http://localhost:*/*",
+        "http://127.0.0.1:*/*"
+      ],
+      "js": ["content.js"],
+      "run_at": "document_start"
+    }
+  ]
+}

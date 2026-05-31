@@ -14,9 +14,11 @@
     timerStart: null,
     counterStyle: 'count',
     onboarded: false,
-    log: {},          // { 'YYYY-MM-DD': [{text, ts, note?}] }
+    log: {},          // { 'YYYY-MM-DD': [{text, ts, note?, activity?}] }
     lastSeen: null,   // YYYY-MM-DD of last app open
     currentNote: '',  // free-form journal for the current task
+    activityTracking: false,      // opt-in: ask the companion where time went
+    activityReportAfterTask: true,// show the breakdown overlay on completion
     // released items are no longer persisted — the celebratory toast is the closure
   };
 
@@ -115,6 +117,23 @@
   const releasedToast = el('released-toast');
   const releasedWord = releasedToast.querySelector('.released-word');
   const releasedMotes = el('released-motes');
+  // Activity (companion extension)
+  const activitySetupRow = el('activity-setup-row');
+  const activityStatus = el('activity-status');
+  const activityReportRow = el('activity-report-row');
+  const activityReportState = el('activity-report-state');
+  const activitySetup = el('activity-setup');
+  const activitySetupClose = el('activity-setup-close');
+  const asStatus = el('as-status');
+  const asStatusText = el('as-status-text');
+  const activityEnable = el('activity-enable');
+  const activityReport = el('activity-report');
+  const activityReportClose = el('activity-report-close');
+  const arEyebrow = el('ar-eyebrow');
+  const arHeadline = el('ar-headline');
+  const arBar = el('ar-bar');
+  const arList = el('ar-list');
+  const arFoot = el('ar-foot');
 
   /** ---------- Motion (motion.dev) ----------
    * A thin layer on top of the Motion library. Falls back to no-op when
@@ -397,6 +416,211 @@
     }
   }
 
+  /** ---------- Activity (companion extension) ----------
+   * The page is sandboxed and can't see other tabs, so an optional companion
+   * extension records time-on-domain and answers range queries over an
+   * origin-scoped postMessage bridge. This module owns detection + querying;
+   * the rendering lives in renderActivityReport / renderActivitySettings. Every
+   * path is guarded so the app behaves identically when the companion is absent.
+   */
+  const Activity = (function () {
+    let connected = false;
+    const pending = new Map(); // id -> { resolve, timer }
+    let seq = 0;
+
+    function markConnected(on) {
+      if (connected === on) return;
+      connected = on;
+      renderActivitySettings();
+    }
+
+    // The content script either set a marker before us, or it answers a hello.
+    function detect() {
+      if (document.documentElement.dataset.onethingTracker) markConnected(true);
+      try { window.postMessage({ source: 'onething-app', type: 'ot_hello?' }, '*'); } catch (e) {}
+    }
+
+    window.addEventListener('message', (event) => {
+      if (event.source !== window) return;
+      const d = event.data;
+      if (!d || d.source !== 'onething-ext') return;
+      if (d.type === 'hello') { markConnected(true); return; }
+      if (d.type === 'response') {
+        const p = pending.get(d.id);
+        if (p) { clearTimeout(p.timer); pending.delete(d.id); p.resolve(d.payload); }
+      }
+    });
+
+    function query(from, to) {
+      if (!connected) return Promise.resolve(null);
+      return new Promise((resolve) => {
+        const id = 'q' + (++seq);
+        const timer = setTimeout(() => {
+          if (pending.has(id)) { pending.delete(id); resolve(null); }
+        }, 1500);
+        pending.set(id, { resolve, timer });
+        try {
+          window.postMessage({ source: 'onething-app', type: 'ot_query', id, from, to }, '*');
+        } catch (e) {
+          clearTimeout(timer); pending.delete(id); resolve(null);
+        }
+      });
+    }
+
+    return { get connected() { return connected; }, detect, query };
+  })();
+
+  // Human-friendly duration ("47s", "12m", "1h 4m") — distinct from fmt()'s clock.
+  function fmtDur(ms) {
+    const s = Math.round(ms / 1000);
+    if (s < 60) return s + 's';
+    const m = Math.round(s / 60);
+    if (m < 60) return m + 'm';
+    const h = Math.floor(m / 60), mm = m % 60;
+    return mm ? `${h}h ${mm}m` : `${h}h`;
+  }
+  function monogram(host) {
+    const c = (host || '?').replace(/^www\./, '')[0];
+    return (c || '?').toUpperCase();
+  }
+
+  // Palette tokens reused for the breakdown segments (in priority order).
+  const AR_COLORS = [
+    '--color-engagement-gold', '--color-intelligence-blue', '--color-deliver-green',
+    '--color-leadgen-red', '--color-subtle-lavender', '--color-petal-pink',
+    '--color-mint-green', '--color-canary-yellow',
+  ];
+
+  // Collapse a long host list to the top 6 + a single "N more" bucket.
+  function groupHosts(hosts) {
+    const top = hosts.slice(0, 6);
+    const rest = hosts.slice(6);
+    if (rest.length) {
+      top.push({ host: `${rest.length} more`, ms: rest.reduce((a, h) => a + h.ms, 0), favicon: null, _other: true });
+    }
+    return top;
+  }
+
+  // Adaptive, non-judgmental headline driven by focus concentration + idle.
+  function activityHeadline({ total, idle, hosts, activeTotal }) {
+    if (!hosts.length || activeTotal <= 0) {
+      return { eyebrow: 'Where your time went', headline: 'All quiet — no browsing tracked for this one.' };
+    }
+    if (idle > activeTotal && idle > total * 0.5) {
+      return { eyebrow: 'Where your time went', headline: `Mostly away from the browser — ${fmtDur(idle)} off-screen.` };
+    }
+    const top = hosts[0];
+    const focus = top.ms / activeTotal;
+    if (focus >= 0.7) {
+      return { eyebrow: 'Nice focus', headline: `Locked in — ${fmtDur(top.ms)} on ${top.host}, head down.` };
+    }
+    if (hosts.length >= 5) {
+      return { eyebrow: 'Where your time went', headline: `Your attention moved across ${hosts.length} sites. No judgement — just a mirror.` };
+    }
+    return { eyebrow: 'Where your time went', headline: `${fmtDur(activeTotal)} across ${hosts.length} sites. No judgement — here's where.` };
+  }
+
+  function renderActivityReport(entry) {
+    const a = entry && entry.activity;
+    if (!a) return;
+    const total = a.total || 0;
+    const idle = a.idle || 0;
+    const hosts = (a.hosts || []).filter((h) => h.ms > 0);
+    const activeTotal = hosts.reduce((s, h) => s + h.ms, 0);
+    const denom = Math.max(1, activeTotal + idle);
+
+    const hd = activityHeadline({ total, idle, hosts, activeTotal });
+    arEyebrow.textContent = hd.eyebrow;
+    arHeadline.textContent = hd.headline;
+
+    const grouped = groupHosts(hosts);
+
+    // Stacked bar.
+    arBar.innerHTML = '';
+    grouped.forEach((h, i) => {
+      const seg = document.createElement('span');
+      seg.className = 'ar-seg';
+      seg.style.width = (h.ms / denom * 100) + '%';
+      seg.style.background = `var(${AR_COLORS[i % AR_COLORS.length]})`;
+      seg.title = `${h.host} · ${fmtDur(h.ms)}`;
+      arBar.appendChild(seg);
+    });
+    if (idle > 0) {
+      const seg = document.createElement('span');
+      seg.className = 'ar-seg ar-seg-idle';
+      seg.style.width = (idle / denom * 100) + '%';
+      seg.title = `Away · ${fmtDur(idle)}`;
+      arBar.appendChild(seg);
+    }
+
+    // Per-site list.
+    arList.innerHTML = '';
+    grouped.forEach((h, i) => {
+      const row = document.createElement('div');
+      row.className = 'ar-row';
+      const pct = Math.round(h.ms / denom * 100);
+      const color = `var(${AR_COLORS[i % AR_COLORS.length]})`;
+      const mark = h.favicon && !h._other
+        ? `<img class="ar-fav" src="${h.favicon}" alt="" width="16" height="16" referrerpolicy="no-referrer">`
+        : `<span class="ar-dot" style="background:${color}">${h._other ? '+' : monogram(h.host)}</span>`;
+      row.innerHTML = `${mark}<span class="ar-host"></span><span class="ar-dur">${fmtDur(h.ms)}</span><span class="ar-pct">${pct}%</span>`;
+      row.querySelector('.ar-host').textContent = h.host;
+      arList.appendChild(row);
+    });
+    if (idle > 0) {
+      const row = document.createElement('div');
+      row.className = 'ar-row ar-row-idle';
+      const pct = Math.round(idle / denom * 100);
+      row.innerHTML = `<span class="ar-dot ar-dot-idle">~</span><span class="ar-host">Away from the browser</span><span class="ar-dur">${fmtDur(idle)}</span><span class="ar-pct">${pct}%</span>`;
+      arList.appendChild(row);
+    }
+
+    arFoot.textContent = hosts.length
+      ? `${fmtDur(total)} since you started · ${hosts.length} ${hosts.length === 1 ? 'site' : 'sites'}`
+      : `${fmtDur(total)} since you started`;
+
+    activityReport.classList.add('open');
+    if (motionOn) {
+      const parts = activityReport.querySelectorAll('.activity-report-inner > *');
+      mAnimate(parts, { opacity: [0, 1], y: [10, 0] },
+        { duration: 0.5, delay: mStagger(0.06, { startDelay: 0.1 }), ease });
+      mAnimate(arBar.querySelectorAll('.ar-seg'), { scaleX: [0, 1] },
+        { duration: 0.7, delay: mStagger(0.05, { startDelay: 0.25 }), ease });
+    }
+  }
+  function closeActivityReport() { activityReport.classList.remove('open'); }
+
+  function openActivitySetup() {
+    Activity.detect();
+    renderActivitySettings();
+    activitySetup.classList.add('open');
+    if (motionOn) {
+      const parts = activitySetup.querySelectorAll('.activity-setup-inner > *');
+      mAnimate(parts, { opacity: [0, 1], y: [10, 0] },
+        { duration: 0.5, delay: mStagger(0.05, { startDelay: 0.12 }), ease });
+    }
+  }
+  function closeActivitySetup() { activitySetup.classList.remove('open'); }
+
+  // Reflects connection + opt-in state into the popover rows and setup overlay.
+  function renderActivitySettings() {
+    const on = Activity.connected;
+    const enabled = !!state.activityTracking;
+    if (asStatus) {
+      asStatus.dataset.on = on ? '1' : '0';
+      asStatusText.textContent = on ? 'Companion connected' : 'Companion not detected';
+    }
+    if (activityEnable) {
+      activityEnable.dataset.on = enabled ? '1' : '0';
+      activityEnable.setAttribute('aria-checked', enabled ? 'true' : 'false');
+    }
+    if (activityStatus) {
+      activityStatus.textContent = enabled ? (on ? 'On' : 'Waiting…') : (on ? 'Off' : 'Set up →');
+    }
+    if (activityReportRow) activityReportRow.hidden = !enabled;
+    if (activityReportState) activityReportState.textContent = state.activityReportAfterTask ? 'On' : 'Off';
+  }
+
   /** ---------- Streak / log render ---------- */
   let prevStreakDays = 0;
   function renderStreak() {
@@ -640,6 +864,14 @@
           n.textContent = it.note;
           r.querySelector('.ltext').appendChild(n);
         }
+        if (it.activity && it.activity.hosts && it.activity.hosts.length) {
+          const nh = it.activity.hosts.length;
+          const chip = document.createElement('button');
+          chip.className = 'ar-chip';
+          chip.textContent = `⏱ ${fmtDur(it.activity.total)} · ${nh} ${nh === 1 ? 'site' : 'sites'}`;
+          chip.addEventListener('click', (e) => { e.stopPropagation(); renderActivityReport(it); });
+          r.querySelector('.ltext').appendChild(chip);
+        }
         dayWrap.appendChild(r);
       });
       logList.appendChild(dayWrap);
@@ -782,12 +1014,31 @@
     const text = state.current;
     const today = todayISO();
     if (!state.log[today]) state.log[today] = [];
-    const entry = { text, ts: Date.now() };
+    const winFrom = state.timerStart;
+    const winTo = Date.now();
+    const entry = { text, ts: winTo };
     const note = (state.currentNote || '').trim();
     if (note) entry.note = note;
     state.log[today].push(entry);
     // Clear the note — it's now committed to the log
     state.currentNote = '';
+
+    // Activity: ask the companion where this task's time went, snapshot it onto
+    // the log entry, and (optionally) mirror it back. Fully guarded + async, so
+    // completion never waits on or breaks because of the companion.
+    if (state.activityTracking && Activity.connected && winFrom) {
+      Activity.query(winFrom, winTo).then((res) => {
+        if (!res || !res.hosts || !res.hosts.length) return;
+        entry.activity = {
+          total: res.total,
+          idle: res.idle,
+          hosts: res.hosts.slice(0, 8).map((h) => ({ host: h.host, ms: h.ms, favicon: h.favicon || null })),
+        };
+        save();
+        if (activeTab === 'log' && drawer.classList.contains('open')) renderLog();
+        if (state.activityReportAfterTask) renderActivityReport(entry);
+      });
+    }
     if (asidePanel.classList.contains('open')) closeAside();
 
     // Run gentle completion overlay
@@ -1058,6 +1309,29 @@
   logRow.addEventListener('click', () => { closePopover(); openDrawer('log'); });
   manifestoRow.addEventListener('click', () => { closePopover(); openManifesto(); });
 
+  /** ---------- Activity wiring ---------- */
+  activitySetupRow.addEventListener('click', () => { closePopover(); openActivitySetup(); });
+  activitySetupClose.addEventListener('click', closeActivitySetup);
+  activitySetup.addEventListener('click', (e) => { if (e.target === activitySetup) closeActivitySetup(); });
+  activityEnable.addEventListener('click', () => {
+    state.activityTracking = !state.activityTracking;
+    save();
+    if (state.activityTracking) Activity.detect();
+    renderActivitySettings();
+  });
+  activityReportRow.addEventListener('click', () => {
+    state.activityReportAfterTask = !state.activityReportAfterTask;
+    save();
+    renderActivitySettings();
+  });
+  activityReportClose.addEventListener('click', closeActivityReport);
+  activityReport.addEventListener('click', (e) => { if (e.target === activityReport) closeActivityReport(); });
+  document.addEventListener('keydown', (e) => {
+    if (e.key !== 'Escape') return;
+    if (activityReport.classList.contains('open')) closeActivityReport();
+    else if (activitySetup.classList.contains('open')) closeActivitySetup();
+  });
+
   /** ---------- Backup / Restore ---------- */
   function exportState() {
     const data = JSON.stringify(state, null, 2);
@@ -1321,6 +1595,7 @@
     tickTimer();
     renderAside();
     updateDocTitle();
+    renderActivitySettings();
   }
 
   if (!state.onboarded) {
@@ -1332,6 +1607,9 @@
     maybeShowGreeting();
   }
   setInterval(applyMood, 60000);
+  // The companion's content script may load before or after us — probe once now,
+  // and it also announces itself, so connection lights up either way.
+  Activity.detect();
 
   // Expose for tweaks
   window.__onething = {
