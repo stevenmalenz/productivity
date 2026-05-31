@@ -8,7 +8,7 @@
   <link rel="preconnect" href="https://fonts.gstatic.com">
   
   
-<link rel="stylesheet" href="styles.css?v=20260510l">
+<link rel="stylesheet" href="styles.css?v=20260531a">
 </head>
 <body>
   <div class="backdrop" id="backdrop"></div>
@@ -149,6 +149,16 @@
       <span class="right">→</span>
     </div>
     <div class="pop-divider"></div>
+    <div class="pop-title">Activity</div>
+    <div class="pop-row" id="activity-setup-row">
+      <span>Where my time goes</span>
+      <span class="right" id="activity-status">Set up →</span>
+    </div>
+    <div class="pop-row" id="activity-report-row" hidden>
+      <span>Report after each task</span>
+      <span class="right" id="activity-report-state">On</span>
+    </div>
+    <div class="pop-divider"></div>
     <div class="pop-row" id="export-row">
       <span>Back up to file</span>
       <span class="right">↓</span>
@@ -228,13 +238,53 @@
     </div>
   </div>
 
+  <!-- Activity: set up the companion -->
+  <div class="activity-setup" id="activity-setup">
+    <button class="manifesto-close" id="activity-setup-close" aria-label="Close">
+      <svg width="14" height="14" viewBox="0 0 14 14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M3 3l8 8M11 3l-8 8"></path></svg>
+    </button>
+    <div class="activity-setup-inner">
+      <div class="as-status" id="as-status" data-on="0">
+        <span class="as-dot"></span>
+        <span id="as-status-text">Companion not detected</span>
+      </div>
+      <h1>See where your time goes.</h1>
+      <p>You set the one thing, then the day happens — tabs, detours, deep dives. This quietly mirrors back where those minutes actually went, so you can reflect without the guesswork.</p>
+      <p>It needs a small companion extension, because a web page can't see your other tabs. The companion records <em>only the website name</em> you're looking at — never the page, the title, or what's on it. Everything stays on your machine, and is forgotten after seven days.</p>
+      <div class="as-steps">
+        <div class="as-step"><span class="as-num">1</span><span>Open <code>chrome://extensions</code> and turn on <b>Developer mode</b>.</span></div>
+        <div class="as-step"><span class="as-num">2</span><span>Click <b>Load unpacked</b> and choose the <code>extension</code> folder from this project.</span></div>
+        <div class="as-step"><span class="as-num">3</span><span>Come back here — it connects on its own.</span></div>
+      </div>
+      <div class="as-toggle-row">
+        <span>Track where my time goes</span>
+        <button class="as-toggle" id="activity-enable" role="switch" aria-checked="false" data-on="0"><i></i></button>
+      </div>
+      <div class="signoff">made with restraint · nothing ever leaves your machine</div>
+    </div>
+  </div>
+
+  <!-- Activity: the report -->
+  <div class="activity-report" id="activity-report">
+    <button class="manifesto-close" id="activity-report-close" aria-label="Close">
+      <svg width="14" height="14" viewBox="0 0 14 14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M3 3l8 8M11 3l-8 8"></path></svg>
+    </button>
+    <div class="activity-report-inner">
+      <div class="ar-eyebrow" id="ar-eyebrow">Where your time went</div>
+      <h1 class="ar-headline" id="ar-headline"></h1>
+      <div class="ar-bar" id="ar-bar" aria-hidden="true"></div>
+      <div class="ar-list" id="ar-list"></div>
+      <div class="ar-foot" id="ar-foot"></div>
+    </div>
+  </div>
+
   <script src="assets/vendor/react.development.js"></script>
   <script src="assets/vendor/react-dom.development.js"></script>
   <script src="assets/vendor/babel-standalone.js"></script>
-  <script src="assets/vendor/motion.js?v=20260510l"></script>
-  <script type="text/babel" src="assets/tweaks-panel.jsx?v=20260510l"></script>
-  <script src="assets/app.js?v=20260510l"></script>
-  <script type="text/babel" src="assets/tweaks-app.js?v=20260510l"></script>
+  <script src="assets/vendor/motion.js?v=20260531a"></script>
+  <script type="text/babel" src="assets/tweaks-panel.jsx?v=20260531a"></script>
+  <script src="assets/app.js?v=20260531a"></script>
+  <script type="text/babel" src="assets/tweaks-app.js?v=20260531a"></script>
 
 
 </body></html>
